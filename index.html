@@ -148,6 +148,10 @@ const VERIFICADO = 'verificado', VERIF = 'verificar', INTERNO = 'interno';
    complementos por variable, pendientes de validar por el titular.
    ========================================================================= */
 const esFis = t => t === 'fisica', esMor = t => t === 'moral';
+// Un extranjero no puede adquirir el dominio en zona restringida (CPEUM art. 27-I; LIE arts. 10 y 11):
+// el vendedor transmite a una institución fiduciaria y el extranjero queda como fideicomisario.
+const fideicomiso = e => e.compradorExtranjero && e.zonaRestringida;
+const FIDUCIARIA = 'Institución fiduciaria (adquirente)';
 // Lo relativo al inmueble lo entrega la parte enajenante (así lo agrupa la lista oficial)
 const INMUEBLE = 'Inmueble (lo entrega el vendedor)';
 const REQUISITOS = [
@@ -180,7 +184,14 @@ const REQUISITOS = [
   { id: 'cm_bc', grupo: 'Comprador', texto: 'Datos de identificación del beneficiario controlador', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral · LFPIORPI', propuesta: true },
   { id: 'c_apod', grupo: 'Comprador', texto: 'Si compra por medio de apoderado: poder original (o copia certificada) con facultades suficientes', aplicaSi: e => e.apoderado, why: 'Interviene apoderado' },
   { id: 'c_ext1', grupo: 'Comprador', texto: 'Pasaporte vigente y documento migratorio', aplicaSi: e => e.compradorExtranjero, why: 'Comprador extranjero', propuesta: true },
-  { id: 'c_ext2', grupo: 'Comprador', texto: 'Elección de institución fiduciaria y datos para el fideicomiso', aplicaSi: e => e.compradorExtranjero && e.zonaRestringida, why: 'Extranjero en zona restringida', propuesta: true },
+  { id: 'c_calvo', grupo: 'Comprador', texto: 'Convenio ante la SRE en términos del art. 27-I constitucional (cláusula Calvo) y permiso de la SRE, previos a la adquisición', aplicaSi: e => e.compradorExtranjero && !e.zonaRestringida, why: 'Extranjero fuera de zona restringida · LIE art. 10-A' },
+  { id: 'c_fsus', grupo: 'Comprador', texto: 'Designación de fideicomisario(s) sustituto(s)', aplicaSi: fideicomiso, why: 'Fideicomiso en zona restringida', propuesta: true },
+  // ---- Institución fiduciaria (extranjero en zona restringida)
+  { id: 'f_elec', grupo: FIDUCIARIA, texto: 'Institución fiduciaria elegida por el comprador y carta de aceptación del cargo', aplicaSi: fideicomiso, why: 'LIE art. 11', propuesta: true },
+  { id: 'f_perm', grupo: FIDUCIARIA, texto: 'Permiso de la SRE a la fiduciaria para adquirir derechos sobre el inmueble', aplicaSi: fideicomiso, why: 'LIE art. 11' },
+  { id: 'f_proy', grupo: FIDUCIARIA, texto: 'Clausulado del fideicomiso aprobado por la fiduciaria (fines, duración máxima de 50 años prorrogable)', aplicaSi: fideicomiso, why: 'LIE arts. 12 y 13', propuesta: true },
+  { id: 'f_rep', grupo: FIDUCIARIA, texto: 'Poder e identificación del delegado fiduciario que comparecerá a firmar', aplicaSi: fideicomiso, why: 'La fiduciaria es la adquirente', propuesta: true },
+  { id: 'f_csf', grupo: FIDUCIARIA, texto: 'Constancia de situación fiscal de la institución fiduciaria', aplicaSi: fideicomiso, why: 'La fiduciaria es la adquirente', propuesta: true },
   // ---- Crédito
   { id: 'o_hip1', grupo: 'Crédito', texto: 'Carta de instrucción / asignación de crédito de la institución', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria', propuesta: true },
   { id: 'o_hip2', grupo: 'Crédito', texto: 'Avalúo de la institución acreditante', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria', propuesta: true },
@@ -194,7 +205,8 @@ const REQUISITOS = [
   { id: 'i_cond2', grupo: INMUEBLE, texto: 'Constancia de no adeudo de cuotas expedida por el administrador', aplicaSi: e => e.condominio, why: 'Condominio', propuesta: true },
   { id: 'i_ejido', grupo: INMUEBLE, texto: 'Título de dominio pleno (RAN) y constancia del derecho del tanto', aplicaSi: e => e.ejidal, why: 'Origen ejidal', propuesta: true },
 ];
-const GRUPOS = ['Vendedor', INMUEBLE, 'Comprador', 'Crédito'];
+const GRUPOS = ['Vendedor', INMUEBLE, FIDUCIARIA, 'Comprador', 'Crédito'];
+const nombreGrupo = (g, e) => g === 'Comprador' && fideicomiso(e) ? 'Comprador (fideicomisario)' : g;
 
 /* =========================================================================
    3. REGLAS — cronograma (antes, durante y después de la firma)
@@ -208,7 +220,9 @@ const TAREAS = [
   { id: 't_clg', etapa: 'prefirma', texto: 'Presentar primer aviso preventivo y solicitar certificado de libertad de gravamen', resp: 'Gestor', plazo: { ref: 'alta', dias: 3 }, tipo: INTERNO, nota: 'Ajuste aquí la fecha real de presentación: de ella dependen la vigencia del aviso (30 días naturales) y las fechas del RPP.', aplicaSi: () => true },
   { id: 't_aval', etapa: 'prefirma', texto: 'Avalúo validado por catastro (lo tramita la notaría o el cliente)', resp: 'Gestor', plazo: { ref: 'alta', dias: 3 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_reqok', etapa: 'prefirma', texto: 'Requisitos completos y cotejados', resp: 'Proyectista', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, auto: 'requisitos', aplicaSi: () => true },
-  { id: 't_fide', etapa: 'prefirma', texto: 'Permiso SRE y aceptación de la fiduciaria para el fideicomiso', resp: 'Proyectista', plazo: { ref: 'firma', dias: -15 }, tipo: VERIF, aplicaSi: e => e.compradorExtranjero && e.zonaRestringida },
+  { id: 't_fide', etapa: 'prefirma', texto: 'Pedir a la fiduciaria que solicite el permiso de la SRE', resp: 'Proyectista', plazo: { ref: 'firma', dias: -30, habiles: true }, tipo: VERIFICADO, fund: 'LIE arts. 11 y 14', nota: 'La SRE resuelve en 5 días hábiles (oficina central) o 30 (delegación); sin resolución, se entiende aprobado.', aplicaSi: fideicomiso },
+  { id: 't_fide2', etapa: 'prefirma', texto: 'Permiso SRE obtenido y clausulado del fideicomiso aprobado por la fiduciaria', resp: 'Proyectista', plazo: { ref: 'firma', dias: -5 }, tipo: INTERNO, nota: 'Duración máxima del fideicomiso: 50 años, prorrogable (LIE art. 13).', aplicaSi: fideicomiso },
+  { id: 't_calvo', etapa: 'prefirma', texto: 'Convenio (cláusula Calvo) y permiso de la SRE para el comprador extranjero', resp: 'Proyectista', plazo: { ref: 'firma', dias: -30, habiles: true }, tipo: VERIFICADO, fund: 'LIE art. 10-A', nota: 'Municipio totalmente fuera de la zona: aprobado si la SRE no publica negativa en 5 días hábiles. Parcialmente dentro: la SRE resuelve en 30 días hábiles.', aplicaSi: e => e.compradorExtranjero && !e.zonaRestringida },
   { id: 't_ejido', etapa: 'prefirma', texto: 'Verificar dominio pleno y notificación del derecho del tanto', resp: 'Proyectista', plazo: { ref: 'firma', dias: -15 }, tipo: VERIF, aplicaSi: e => e.ejidal },
   { id: 't_cond', etapa: 'prefirma', texto: 'Recabar constancia de no adeudo de cuotas condominales', resp: 'Gestor', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, aplicaSi: e => e.condominio },
   { id: 't_proy', etapa: 'prefirma', texto: 'Elaborar proyecto de escritura (EP #### PROYECTO)', resp: 'Proyectista', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, aplicaSi: () => true },
@@ -230,7 +244,7 @@ const TAREAS = [
   { id: 'p_isabi', etapa: 'posfirma', texto: 'Pagar ISABI y presentar aviso de transmisión', resp: 'Gestor', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, nota: 'Ley de ingresos / hacienda municipal; no está en la carpeta de normativa.', aplicaSi: () => true },
   { id: 'p_cat', etapa: 'posfirma', texto: 'Remitir aviso a catastro (traslación de dominio)', resp: 'Gestor', plazo: { ref: 'firma', dias: 15, habiles: true }, tipo: VERIFICADO, fund: 'Ley de Catastro Nay. arts. 34-II y 36', nota: 'La ley cuenta 15 días hábiles desde la autorización definitiva; la app usa la firma como referencia conservadora.', aplicaSi: () => true },
   { id: 'p_pld', etapa: 'posfirma', texto: 'Aviso LFPIORPI (si se rebasa el umbral)', resp: 'Titular', plazo: { tipo: 'dia17' }, tipo: VERIFICADO, fund: 'LFPIORPI art. 23', nota: 'A más tardar el día 17 del mes inmediato siguiente.', aplicaSi: () => true },
-  { id: 'p_rnie', etapa: 'posfirma', texto: 'Aviso a la SRE / inscripción en el RNIE', resp: 'Proyectista', plazo: { ref: 'firma', dias: 30 }, tipo: VERIF, aplicaSi: e => e.compradorExtranjero },
+  { id: 'p_rnie', etapa: 'posfirma', texto: 'Inscripción del fideicomiso en el RNIE (la realiza la fiduciaria)', resp: 'Proyectista', plazo: { ref: 'firma', dias: 40, habiles: true }, tipo: VERIFICADO, fund: 'LIE art. 32-III', nota: '40 días hábiles desde la constitución del fideicomiso. La notaría entrega el testimonio y da seguimiento.', aplicaSi: fideicomiso },
   { id: 'p_test', etapa: 'posfirma', texto: 'Armar testimonio y apéndice (con Notaría 37)', resp: 'Proyectista', plazo: { ref: 'firma', dias: 10 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 'p_rpp', etapa: 'posfirma', texto: 'Inscripción en el RPP (portal notarial digital)', resp: 'Gestor', plazo: { ref: 'tarea', tarea: 'p_avdef', dias: 90 }, tipo: VERIFICADO, fund: 'Ley del RPP Nay. art. 91-II', nota: 'Dentro de los 90 días naturales de vigencia del aviso definitivo.', aplicaSi: () => true },
   { id: 'p_canc', etapa: 'posfirma', texto: 'Inscribir cancelación de la hipoteca anterior', resp: 'Gestor', plazo: { ref: 'tarea', tarea: 'p_avdef', dias: 90 }, tipo: INTERNO, aplicaSi: e => e.inmuebleGravado },
@@ -259,7 +273,7 @@ function inhabil(s) {
   if (md === '12-01' && (y - 2024) % 6 === 0) return true;
   return [nLunes(y, 1, 1), nLunes(y, 2, 3), nLunes(y, 10, 3)].includes(s);
 }
-function addHabiles(s, n) { let d = s; while (n > 0) { d = addDays(d, 1); if (!inhabil(d)) n--; } return d; }
+function addHabiles(s, n) { const paso = Math.sign(n); let d = s, k = Math.abs(n); while (k > 0) { d = addDays(d, paso); if (!inhabil(d)) k--; } return d; }
 
 // fechaDe: fecha (con ajuste manual, si lo hay) de otra tarea del mismo expediente
 function fechaLimite(regla, exp, fechaDe) {
@@ -337,6 +351,7 @@ function descVariables(e) {
     e.pago === 'hipoteca' ? `Crédito hipotecario (${e.acreedor === 'banco' ? 'banco' : e.acreedor.toUpperCase()})` : 'De contado'];
   if (e.condominio) out.push('Condominio');
   if (e.zonaRestringida) out.push('Zona restringida');
+  if (fideicomiso(e)) out.push('Compraventa mediante fideicomiso');
   if (e.ejidal) out.push('Origen ejidal');
   if (e.inmuebleGravado) out.push('Con hipoteca previa');
   if (e.apoderado) out.push('Con apoderado');
@@ -417,7 +432,7 @@ function vForm() {
         </fieldset>
         <fieldset><legend>Inmueble y partes</legend>
           ${chk('condominio', 'Está en régimen de propiedad en condominio')}
-          ${chk('zonaRestringida', 'Está en zona restringida (costa/frontera)')}
+          ${chk('zonaRestringida', 'Está en zona restringida (100 km de fronteras o 50 km de playas; LIE art. 2-VI)')}
           ${chk('ejidal', 'Es de origen ejidal')}
           ${chk('inmuebleGravado', 'Tiene hipoteca vigente que se cancelará')}
           ${chk('apoderado', 'Alguna parte actúa por apoderado')}
@@ -451,14 +466,14 @@ function vDetalle() {
     <div style="margin:16px 0 4px" class="row"><h2>${esc(e.numero)}</h2> ${pillEstado(r)}</div>
     <p class="sub">${esc(e.alias)}${e.municipio ? ' · ' + esc(e.municipio) : ''} · Firma: <strong>${fmt(e.fechaFirma)}</strong> · Avance ${r.avance}%</p>
     <div class="summary">${descVariables(e).map(v => `<span class="tag" style="margin:0">${esc(v)}</span>`).join('')}</div>
-    <div style="margin-top:14px">${alertaAviso(e, r.tareas)}</div>
+    <div style="margin-top:14px">${fideicomiso(e) ? '<div class="notice">Comprador extranjero en zona restringida: no puede adquirir el dominio (CPEUM art. 27-I). La operación se formaliza como compraventa con constitución de fideicomiso: el vendedor transmite a la institución fiduciaria y el comprador queda como fideicomisario, con permiso de la SRE (LIE arts. 10 y 11).</div>' : ''}${alertaAviso(e, r.tareas)}</div>
     <div class="two" style="margin-top:8px">
       <section>
         <div class="row"><h3>Requisitos al cliente · ${r.reqOk}/${r.reqs.length}</h3><div class="spacer"></div>
           <button class="btn" onclick="copiarLista('${e.id}')">Copiar lista para WhatsApp/correo</button></div>
         <div class="card pad">${grupos.map(g => {
           const rs = r.reqs.filter(x => x.grupo === g); if (!rs.length) return '';
-          return `<div style="font-weight:700;margin-top:6px">${g}</div>` + rs.map(x => {
+          return `<div style="font-weight:700;margin-top:6px">${nombreGrupo(g, e)}</div>` + rs.map(x => {
             const st = e.requisitos[x.id] || {};
             return `<div class="req ${st.recibido ? 'done' : ''}"><div><span class="t">${esc(x.texto)}</span>${x.propuesta ? ' <span class="tag verif" title="No está en la lista «Requisitos escrituras_Not 41»; pendiente de validar">propuesta</span>' : ''}${x.why ? `<div class="why">Aplica por: ${esc(x.why)}</div>` : ''}</div>
               <div class="boxes">${box(x.id, 'pedido', 'Pedido')}${box(x.id, 'recibido', 'Recibido')}${box(x.id, 'cotejado', 'Cotejado')}</div></div>`;
@@ -494,7 +509,7 @@ function copiarLista(id) {
   const pend = requisitosDe(e).filter(r => !(e.requisitos[r.id] || {}).recibido);
   const grupos = GRUPOS.filter(g => pend.some(r => r.grupo === g));
   const txt = `*Notaría Pública 41*\nRequisitos para su escritura de compraventa (exp. ${e.numero}):\n\n` +
-    grupos.map(g => `*${g}*\n` + pend.filter(r => r.grupo === g).map(r => `• ${r.texto}`).join('\n')).join('\n\n') +
+    grupos.map(g => `*${nombreGrupo(g, e)}*\n` + pend.filter(r => r.grupo === g).map(r => `• ${r.texto}`).join('\n')).join('\n\n') +
     `\n\n*En caso de copropietarios, se deberá proporcionar de cada uno dicha documentación.*` +
     `\n\n*Otros documentos necesarios (por medio de la notaría):*\n• Avalúo validado (certificado) por catastro (puede tramitarlo el cliente por su cuenta)\n• Certificado de libertad de gravamen con aviso preventivo` +
     `\n\n*NOTA:* Los documentos requeridos podrán enviarse previamente debidamente escaneados al correo de la notaría: ${NOTARIA.correo}, o al WhatsApp ${NOTARIA.whatsapp}, en el entendido de que posteriormente se deberán exhibir los originales para su cotejo.`;

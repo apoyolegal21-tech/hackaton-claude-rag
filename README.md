@@ -24,7 +24,8 @@ Los datos se guardan **solo en el navegador** de quien la usa (localStorage); na
   - Aviso LFPIORPI: a más tardar el día 17 del mes siguiente (LFPIORPI art. 23).
   - Aviso a catastro: 15 días hábiles (Ley de Catastro de Nayarit, arts. 34-II y 36).
   - Avisos preventivos: el primero vence a los 30 días naturales; el definitivo se presenta después de la firma, dentro de esa vigencia, y dura 90 días naturales para inscribir (Ley del RPP de Nayarit, art. 91). La app avisa si la firma cae fuera de la vigencia del primer aviso.
-- **🟡 plazo por verificar:** ISABI (ley municipal), CFDI de retenciones y SRE/RNIE. La fecha es una propuesta editable.
+  - Extranjeros (Ley de Inversión Extranjera): en zona restringida (100 km de fronteras, 50 km de playas; art. 2-VI) no pueden adquirir el dominio, así que la compraventa se formaliza con fideicomiso: permiso SRE a la fiduciaria (arts. 11 y 14) e inscripción en el RNIE dentro de 40 días hábiles (art. 32-III). Fuera de esa zona, convenio y permiso de la SRE (art. 10-A).
+- **🟡 plazo por verificar:** ISABI (ley municipal) y CFDI de retenciones. La fecha es una propuesta editable.
 - **práctica interna:** plazo de organización de la notaría, no un término legal.
 
 Los días inhábiles se calculan según el art. 12 del CFF: fines de semana y días festivos oficiales.
@@ -35,7 +36,7 @@ Se basan en la lista oficial de la notaría, «Requisitos escrituras_Not 41» (a
 Las reglas están en `index.html`, en los objetos `REQUISITOS` y `TAREAS`. Cada regla tiene una condición `aplicaSi` y un plazo relativo a la fecha de alta o de firma, así que para agregar o corregir un requisito basta con editar una línea.
 
 ## Próximos pasos
-- Verificar los plazos 🟡 restantes (ISABI municipal, RMF, Ley de Inversión Extranjera).
+- Verificar los plazos 🟡 restantes (ISABI municipal, RMF) y el Reglamento de la LIE.
 - Agregar otros actos: donación, adjudicación por herencia, poderes, etc.
 - Base de datos compartida para todo el equipo y recordatorios en el calendario.
 - Un asistente con Claude que revise el expediente y sugiera faltantes.
