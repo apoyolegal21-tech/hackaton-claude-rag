@@ -148,6 +148,8 @@ const VERIFICADO = 'verificado', VERIF = 'verificar', INTERNO = 'interno';
    complementos por variable, pendientes de validar por el titular.
    ========================================================================= */
 const esFis = t => t === 'fisica', esMor = t => t === 'moral';
+// Lo relativo al inmueble lo entrega la parte enajenante (así lo agrupa la lista oficial)
+const INMUEBLE = 'Inmueble (lo entrega el vendedor)';
 const REQUISITOS = [
   // ---- Parte enajenante (vendedor)
   { id: 'v_ine', grupo: 'Vendedor', texto: 'Identificación oficial vigente con fotografía (INE o pasaporte; originales al momento de firmar)', aplicaSi: e => esFis(e.vendedorTipo) },
@@ -184,15 +186,15 @@ const REQUISITOS = [
   { id: 'o_hip2', grupo: 'Crédito', texto: 'Avalúo de la institución acreditante', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria', propuesta: true },
   { id: 'o_inf', grupo: 'Crédito', texto: 'Constancia de crédito y precalificación (INFONAVIT/FOVISSSTE)', aplicaSi: e => e.pago === 'hipoteca' && e.acreedor !== 'banco', why: 'Crédito de vivienda institucional', propuesta: true },
   // ---- Inmueble
-  { id: 'i_tit', grupo: 'Inmueble', texto: 'Antecedentes: escritura o título de propiedad (original o copia certificada)', aplicaSi: () => true },
-  { id: 'i_pred', grupo: 'Inmueble', texto: 'Pago predial (al corriente)', aplicaSi: () => true },
-  { id: 'i_agua', grupo: 'Inmueble', texto: 'Pago del agua (al corriente)', aplicaSi: () => true },
-  { id: 'i_gravc', grupo: 'Inmueble', texto: 'Carta de instrucción expedida por el acreedor para cancelar la hipoteca vigente', aplicaSi: e => e.inmuebleGravado, why: 'El inmueble tiene hipoteca vigente' },
-  { id: 'i_cond1', grupo: 'Inmueble', texto: 'Escritura del régimen de propiedad en condominio y reglamento', aplicaSi: e => e.condominio, why: 'Condominio', propuesta: true },
-  { id: 'i_cond2', grupo: 'Inmueble', texto: 'Constancia de no adeudo de cuotas expedida por el administrador', aplicaSi: e => e.condominio, why: 'Condominio', propuesta: true },
-  { id: 'i_ejido', grupo: 'Inmueble', texto: 'Título de dominio pleno (RAN) y constancia del derecho del tanto', aplicaSi: e => e.ejidal, why: 'Origen ejidal', propuesta: true },
+  { id: 'i_tit', grupo: INMUEBLE, texto: 'Antecedentes: escritura o título de propiedad (original o copia certificada)', aplicaSi: () => true },
+  { id: 'i_pred', grupo: INMUEBLE, texto: 'Pago predial (al corriente)', aplicaSi: () => true },
+  { id: 'i_agua', grupo: INMUEBLE, texto: 'Pago del agua (al corriente)', aplicaSi: () => true },
+  { id: 'i_gravc', grupo: INMUEBLE, texto: 'Carta de instrucción expedida por el acreedor para cancelar la hipoteca vigente', aplicaSi: e => e.inmuebleGravado, why: 'El inmueble tiene hipoteca vigente' },
+  { id: 'i_cond1', grupo: INMUEBLE, texto: 'Escritura del régimen de propiedad en condominio y reglamento', aplicaSi: e => e.condominio, why: 'Condominio', propuesta: true },
+  { id: 'i_cond2', grupo: INMUEBLE, texto: 'Constancia de no adeudo de cuotas expedida por el administrador', aplicaSi: e => e.condominio, why: 'Condominio', propuesta: true },
+  { id: 'i_ejido', grupo: INMUEBLE, texto: 'Título de dominio pleno (RAN) y constancia del derecho del tanto', aplicaSi: e => e.ejidal, why: 'Origen ejidal', propuesta: true },
 ];
-const GRUPOS = ['Vendedor', 'Comprador', 'Crédito', 'Inmueble'];
+const GRUPOS = ['Vendedor', INMUEBLE, 'Comprador', 'Crédito'];
 
 /* =========================================================================
    3. REGLAS — cronograma (antes, durante y después de la firma)
@@ -490,7 +492,7 @@ function borrar(id) { if (!confirm('¿Eliminar este expediente? No se puede desh
 function copiarLista(id) {
   const e = DB.expedientes.find(x => x.id === id);
   const pend = requisitosDe(e).filter(r => !(e.requisitos[r.id] || {}).recibido);
-  const grupos = [...new Set(pend.map(r => r.grupo))];
+  const grupos = GRUPOS.filter(g => pend.some(r => r.grupo === g));
   const txt = `*Notaría Pública 41*\nRequisitos para su escritura de compraventa (exp. ${e.numero}):\n\n` +
     grupos.map(g => `*${g}*\n` + pend.filter(r => r.grupo === g).map(r => `• ${r.texto}`).join('\n')).join('\n\n') +
     `\n\n*En caso de copropietarios, se deberá proporcionar de cada uno dicha documentación.*` +
