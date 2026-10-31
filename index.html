@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control de Expedientes</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface-2: #f0eee8; --border: #dedad0;
+  --text: #1f1d1a; --muted: #6b665c; --accent: #6b2737; --accent-soft: #f3e6e9;
+  --red: #b42318; --red-soft: #fde8e6; --amber: #a15c07; --amber-soft: #fdf1dc;
+  --green: #1f7a4d; --green-soft: #e3f4ea; --yellow-soft: #fff7d1;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161514; --surface: #1f1e1c; --surface-2: #2a2826; --border: #3a3734;
+    --text: #ece9e3; --muted: #a39d92; --accent: #d98a9b; --accent-soft: #3a2228;
+    --red: #f2877c; --red-soft: #3d1f1c; --amber: #f0b45c; --amber-soft: #3a2c16;
+    --green: #6fcf97; --green-soft: #1a3326; --yellow-soft: #36301a;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161514; --surface: #1f1e1c; --surface-2: #2a2826; --border: #3a3734;
+  --text: #ece9e3; --muted: #a39d92; --accent: #d98a9b; --accent-soft: #3a2228;
+  --red: #f2877c; --red-soft: #3d1f1c; --amber: #f0b45c; --amber-soft: #3a2c16;
+  --green: #6fcf97; --green-soft: #1a3326; --yellow-soft: #36301a;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+header { background: var(--surface); border-bottom: 1px solid var(--border); }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 6px; flex-wrap: wrap; }
+.brand { font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+.brand small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); }
+nav { display: flex; gap: 4px; overflow-x: auto; }
+nav button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 12px; font: inherit; color: var(--muted); cursor: pointer; white-space: nowrap; }
+nav button.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+main { padding: 20px 0 60px; }
+h2 { font-size: 20px; margin: 0 0 4px; letter-spacing: -.01em; }
+h3 { font-size: 15px; margin: 22px 0 8px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.sub { color: var(--muted); margin: 0 0 16px; font-size: 13.5px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+.pad { padding: 16px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 8px; padding: 7px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+:root[data-theme="dark"] .btn.primary { color: #1f1e1c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #1f1e1c; } }
+.btn.danger { color: var(--red); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.spacer { flex: 1; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+tr.click { cursor: pointer; } tr.click:hover td { background: var(--surface-2); }
+.pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+.pill.red { background: var(--red-soft); color: var(--red); }
+.pill.amber { background: var(--amber-soft); color: var(--amber); }
+.pill.green { background: var(--green-soft); color: var(--green); }
+.pill.gray { background: var(--surface-2); color: var(--muted); }
+.tag { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted); margin-left: 4px; }
+.tag.verif { background: var(--yellow-soft); color: var(--amber); }
+.bar { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; min-width: 80px; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+input, select, textarea { font: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; }
+fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px 14px; margin: 0 0 14px; }
+legend { font-weight: 600; padding: 0 6px; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--text); padding: 4px 0; }
+.check input { margin-top: 4px; }
+.empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+.req { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: center; }
+.req:last-child { border-bottom: 0; }
+.req .boxes { display: flex; gap: 12px; font-size: 13px; color: var(--muted); }
+.req .boxes label { display: flex; gap: 4px; align-items: center; cursor: pointer; }
+.req.done .t { color: var(--muted); text-decoration: line-through; }
+.why { font-size: 12.5px; color: var(--muted); }
+.timeline { position: relative; margin-left: 8px; padding-left: 22px; border-left: 2px solid var(--border); }
+.step { position: relative; padding: 8px 0 14px; }
+.step::before { content: ""; position: absolute; left: -29px; top: 13px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--border); }
+.step.done::before { background: var(--green); border-color: var(--green); }
+.step.red::before { border-color: var(--red); background: var(--red-soft); }
+.step.amber::before { border-color: var(--amber); background: var(--amber-soft); }
+.step.firma::before { background: var(--accent); border-color: var(--accent); width: 16px; height: 16px; left: -31px; }
+.step .line1 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.step .ttl { font-weight: 600; }
+.step.done .ttl { color: var(--muted); text-decoration: line-through; }
+.step .meta { font-size: 13px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.step .meta input[type=date] { padding: 3px 6px; font-size: 13px; }
+.phase { font-weight: 700; color: var(--accent); margin: 10px 0 2px -22px; padding-left: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two > * { min-width: 0; }
+@media (max-width: 820px) { .two { grid-template-columns: 1fr; } .hide-sm { display: none; } }
+@media (max-width: 520px) { .req { grid-template-columns: 1fr; } }
+.summary { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 0; }
+.notice { background: var(--yellow-soft); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; margin-bottom: 14px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.filters button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">Control de Expedientes
+        <small>Notaría Pública 41 · Compraventa de inmueble</small></div>
+      <div class="row">
+        <button class="btn" id="btnTheme" title="Cambiar tema">◐</button>
+      </div>
+    </div>
+    <nav id="nav">
+      <button data-view="lista">Expedientes</button>
+      <button data-view="agenda">Agenda</button>
+      <button data-view="alta">+ Nuevo expediente</button>
+      <button data-view="respaldo">Respaldo</button>
+    </nav>
+  </div>
+</header>
+<main><div class="wrap" id="app"></div></main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   1. CATÁLOGOS
+   ========================================================================= */
+const RESPONSABLES = ['Recepción', 'Proyectista', 'Titular', 'Contador', 'Gestor'];
+
+// Tipo de plazo:
+//   'interno'   → práctica de la notaría (no es un término legal)
+//   'verificar' → término legal pendiente de verificar en fuente oficial (🟡)
+const VERIF = 'verificar', INTERNO = 'interno';
+
+/* =========================================================================
+   2. REGLAS — requisitos que se piden al cliente
+   Cada regla: id, grupo, texto, aplicaSi(exp), por qué aplica (why).
+   ========================================================================= */
+const esFis = t => t === 'fisica', esMor = t => t === 'moral';
+const REQUISITOS = [
+  // ---- Vendedor persona física
+  { id: 'v_ine', grupo: 'Vendedor', texto: 'Identificación oficial vigente (INE o pasaporte)', aplicaSi: e => esFis(e.vendedorTipo) },
+  { id: 'v_curp', grupo: 'Vendedor', texto: 'CURP', aplicaSi: e => esFis(e.vendedorTipo) },
+  { id: 'v_csf', grupo: 'Vendedor', texto: 'Constancia de situación fiscal (RFC) reciente', aplicaSi: e => esFis(e.vendedorTipo) },
+  { id: 'v_nac', grupo: 'Vendedor', texto: 'Acta de nacimiento', aplicaSi: e => esFis(e.vendedorTipo) },
+  { id: 'v_mat', grupo: 'Vendedor', texto: 'Acta de matrimonio', aplicaSi: e => esFis(e.vendedorTipo) && e.vendedorCivil !== 'soltero', why: 'Vendedor casado' },
+  { id: 'v_cony', grupo: 'Vendedor', texto: 'Comparecencia del cónyuge (identificación, CURP, CSF) para otorgar su consentimiento', aplicaSi: e => esFis(e.vendedorTipo) && e.vendedorCivil === 'sociedad', why: 'Casado en sociedad conyugal' },
+  { id: 'v_dom', grupo: 'Vendedor', texto: 'Comprobante de domicilio reciente', aplicaSi: e => esFis(e.vendedorTipo) },
+  // ---- Vendedor persona moral
+  { id: 'vm_acta', grupo: 'Vendedor', texto: 'Acta constitutiva con datos de inscripción en el RPC', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
+  { id: 'vm_poder', grupo: 'Vendedor', texto: 'Poder del representante con facultades de dominio', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
+  { id: 'vm_ine', grupo: 'Vendedor', texto: 'Identificación oficial del representante legal', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
+  { id: 'vm_csf', grupo: 'Vendedor', texto: 'Constancia de situación fiscal de la sociedad', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
+  { id: 'vm_asam', grupo: 'Vendedor', texto: 'Acta de asamblea o consejo que autorice la venta (si los estatutos lo exigen)', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
+  { id: 'vm_bc', grupo: 'Vendedor', texto: 'Declaración de beneficiario controlador', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral · LFPIORPI' },
+  // ---- Exención ISR
+  { id: 'v_exe1', grupo: 'Vendedor', texto: 'Comprobantes de que el inmueble es su casa habitación (domicilio en CSF/INE, recibos)', aplicaSi: e => esFis(e.vendedorTipo) && e.exencionISR, why: 'Solicita exención de ISR' },
+  { id: 'v_exe2', grupo: 'Vendedor', texto: 'Manifestación de no haber aplicado la exención en el plazo legal (🟡 verificar plazo)', aplicaSi: e => esFis(e.vendedorTipo) && e.exencionISR, why: 'Solicita exención de ISR' },
+  // ---- Comprador persona física
+  { id: 'c_ine', grupo: 'Comprador', texto: 'Identificación oficial vigente', aplicaSi: e => esFis(e.compradorTipo) && !e.compradorExtranjero },
+  { id: 'c_curp', grupo: 'Comprador', texto: 'CURP', aplicaSi: e => esFis(e.compradorTipo) && !e.compradorExtranjero },
+  { id: 'c_csf', grupo: 'Comprador', texto: 'Constancia de situación fiscal (RFC) reciente', aplicaSi: e => esFis(e.compradorTipo) },
+  { id: 'c_nac', grupo: 'Comprador', texto: 'Acta de nacimiento', aplicaSi: e => esFis(e.compradorTipo) && !e.compradorExtranjero },
+  { id: 'c_mat', grupo: 'Comprador', texto: 'Acta de matrimonio y régimen patrimonial', aplicaSi: e => esFis(e.compradorTipo) && e.compradorCasado, why: 'Comprador casado' },
+  { id: 'c_dom', grupo: 'Comprador', texto: 'Comprobante de domicilio reciente', aplicaSi: e => esFis(e.compradorTipo) },
+  { id: 'c_ext1', grupo: 'Comprador', texto: 'Pasaporte vigente y documento migratorio (tarjeta de residente o FMM)', aplicaSi: e => e.compradorExtranjero, why: 'Comprador extranjero' },
+  { id: 'c_ext2', grupo: 'Comprador', texto: 'Elección de institución fiduciaria y datos para el fideicomiso', aplicaSi: e => e.compradorExtranjero && e.zonaRestringida, why: 'Extranjero en zona restringida' },
+  { id: 'c_ext3', grupo: 'Comprador', texto: 'Convenio de renuncia (cláusula Calvo) ante la SRE (🟡 verificar procedencia)', aplicaSi: e => e.compradorExtranjero && !e.zonaRestringida, why: 'Extranjero fuera de zona restringida' },
+  // ---- Comprador persona moral
+  { id: 'cm_acta', grupo: 'Comprador', texto: 'Acta constitutiva con datos de inscripción en el RPC', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
+  { id: 'cm_poder', grupo: 'Comprador', texto: 'Poder del representante (actos de administración o dominio)', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
+  { id: 'cm_ine', grupo: 'Comprador', texto: 'Identificación oficial del representante legal', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
+  { id: 'cm_bc', grupo: 'Comprador', texto: 'Declaración de beneficiario controlador', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral · LFPIORPI' },
+  // ---- Ambas partes / operación
+  { id: 'o_kyc', grupo: 'Operación', texto: 'Formato de identificación del cliente (LFPIORPI) firmado por ambas partes', aplicaSi: () => true },
+  { id: 'o_rec', grupo: 'Operación', texto: 'Forma de pago y origen de los recursos (transferencias, cheques)', aplicaSi: () => true },
+  { id: 'o_apod', grupo: 'Operación', texto: 'Poder notarial vigente y suficiente + identificación del apoderado', aplicaSi: e => e.apoderado, why: 'Interviene apoderado' },
+  { id: 'o_hip1', grupo: 'Operación', texto: 'Carta de instrucción / asignación de crédito de la institución', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria' },
+  { id: 'o_hip2', grupo: 'Operación', texto: 'Avalúo de la institución acreditante', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria' },
+  { id: 'o_inf', grupo: 'Operación', texto: 'Constancia de crédito y precalificación (INFONAVIT/FOVISSSTE)', aplicaSi: e => e.pago === 'hipoteca' && e.acreedor !== 'banco', why: 'Crédito de vivienda institucional' },
+  // ---- Inmueble
+  { id: 'i_tit', grupo: 'Inmueble', texto: 'Escritura antecedente (título de propiedad) con datos de inscripción en el RPP', aplicaSi: () => true },
+  { id: 'i_pred', grupo: 'Inmueble', texto: 'Boleta del impuesto predial pagada del año en curso', aplicaSi: () => true },
+  { id: 'i_agua', grupo: 'Inmueble', texto: 'Recibo o constancia de no adeudo de agua', aplicaSi: () => true },
+  { id: 'i_plano', grupo: 'Inmueble', texto: 'Plano o deslinde catastral (si aplica)', aplicaSi: () => true },
+  { id: 'i_gravc', grupo: 'Inmueble', texto: 'Carta de adeudo o instrucción de cancelación del acreedor actual', aplicaSi: e => e.inmuebleGravado, why: 'El inmueble tiene hipoteca vigente' },
+  { id: 'i_cond1', grupo: 'Inmueble', texto: 'Escritura del régimen de propiedad en condominio y reglamento', aplicaSi: e => e.condominio, why: 'Condominio' },
+  { id: 'i_cond2', grupo: 'Inmueble', texto: 'Constancia de no adeudo de cuotas expedida por el administrador', aplicaSi: e => e.condominio, why: 'Condominio' },
+  { id: 'i_cond3', grupo: 'Inmueble', texto: 'Nombramiento vigente del administrador', aplicaSi: e => e.condominio, why: 'Condominio' },
+  { id: 'i_ejido', grupo: 'Inmueble', texto: 'Título de dominio pleno (RAN) y constancia del derecho del tanto (🟡 verificar)', aplicaSi: e => e.ejidal, why: 'Origen ejidal' },
+];
+
+/* =========================================================================
+   3. REGLAS — cronograma (antes, durante y después de la firma)
+   plazo: { ref: 'alta'|'firma', dias } | { tipo: 'dia17' }
+   ========================================================================= */
+const TAREAS = [
+  // --- Prefirma
+  { id: 't_lista', etapa: 'prefirma', texto: 'Enviar lista de requisitos al cliente', resp: 'Recepción', plazo: { ref: 'alta', dias: 0 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_asig', etapa: 'prefirma', texto: 'Asignar proyectista en el Control de trámites', resp: 'Titular', plazo: { ref: 'alta', dias: 1 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_presu', etapa: 'prefirma', texto: 'Elaborar y enviar presupuesto', resp: 'Proyectista', plazo: { ref: 'alta', dias: 2 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_clg', etapa: 'prefirma', texto: 'Solicitar certificado de libertad de gravamen y presentar aviso preventivo', resp: 'Gestor', plazo: { ref: 'alta', dias: 3 }, tipo: VERIF, nota: 'Vigencia del aviso preventivo por verificar', aplicaSi: () => true },
+  { id: 't_aval', etapa: 'prefirma', texto: 'Solicitar avalúo', resp: 'Proyectista', plazo: { ref: 'alta', dias: 3 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_reqok', etapa: 'prefirma', texto: 'Requisitos completos y cotejados', resp: 'Proyectista', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, auto: 'requisitos', aplicaSi: () => true },
+  { id: 't_fide', etapa: 'prefirma', texto: 'Permiso SRE y aceptación de la fiduciaria para el fideicomiso', resp: 'Proyectista', plazo: { ref: 'firma', dias: -15 }, tipo: VERIF, aplicaSi: e => e.compradorExtranjero && e.zonaRestringida },
+  { id: 't_ejido', etapa: 'prefirma', texto: 'Verificar dominio pleno y notificación del derecho del tanto', resp: 'Proyectista', plazo: { ref: 'firma', dias: -15 }, tipo: VERIF, aplicaSi: e => e.ejidal },
+  { id: 't_nopred', etapa: 'prefirma', texto: 'Obtener constancias de no adeudo (predial y agua)', resp: 'Gestor', plazo: { ref: 'firma', dias: -10 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_cond', etapa: 'prefirma', texto: 'Recabar constancia de no adeudo de cuotas condominales', resp: 'Gestor', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, aplicaSi: e => e.condominio },
+  { id: 't_proy', etapa: 'prefirma', texto: 'Elaborar proyecto de escritura (EP #### PROYECTO)', resp: 'Proyectista', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_inst', etapa: 'prefirma', texto: 'Enviar proyecto a la institución acreditante para visto bueno', resp: 'Proyectista', plazo: { ref: 'firma', dias: -6 }, tipo: INTERNO, aplicaSi: e => e.pago === 'hipoteca' },
+  { id: 't_rev', etapa: 'prefirma', texto: 'Revisión del proyecto por el titular', resp: 'Titular', plazo: { ref: 'firma', dias: -5 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_poder', etapa: 'prefirma', texto: 'Verificar vigencia del poder (no revocación / RENAP)', resp: 'Proyectista', plazo: { ref: 'firma', dias: -5 }, tipo: INTERNO, aplicaSi: e => e.apoderado || esMor(e.vendedorTipo) || esMor(e.compradorTipo) },
+  { id: 't_vobo', etapa: 'prefirma', texto: 'Visto bueno del cliente, despacho o gestor', resp: 'Proyectista', plazo: { ref: 'firma', dias: -3 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_pld', etapa: 'prefirma', texto: 'Identificación PLD: consulta de listas y umbral de aviso', resp: 'Proyectista', plazo: { ref: 'firma', dias: -3 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_isr', etapa: 'prefirma', texto: 'Solicitar cálculo de ISR al contador', resp: 'Contador', plazo: { ref: 'firma', dias: -2 }, tipo: INTERNO, nota: 'Práctica: pedirlo con 1–2 días de anticipación', aplicaSi: () => true },
+  { id: 't_fondos', etapa: 'prefirma', texto: 'Recibir provisión para impuestos, derechos y honorarios', resp: 'Recepción', plazo: { ref: 'firma', dias: -1 }, tipo: INTERNO, aplicaSi: () => true },
+  // --- Firma
+  { id: 't_firma', etapa: 'firma', texto: 'Firma de la escritura y cotejo de originales', resp: 'Titular', plazo: { ref: 'firma', dias: 0 }, tipo: INTERNO, aplicaSi: () => true },
+  // --- Posfirma
+  { id: 'p_isr', etapa: 'posfirma', texto: 'Enterar ISR por enajenación (y por adquisición, si procede)', resp: 'Contador', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, aplicaSi: () => true },
+  { id: 'p_cfdi', etapa: 'posfirma', texto: 'Emitir CFDI de retenciones / constancias', resp: 'Contador', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, aplicaSi: () => true },
+  { id: 'p_dnot', etapa: 'posfirma', texto: 'Presentar DeclaraNOT', resp: 'Contador', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, aplicaSi: () => true },
+  { id: 'p_isabi', etapa: 'posfirma', texto: 'Pagar ISABI y presentar aviso de transmisión', resp: 'Gestor', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, nota: 'Depende del municipio', aplicaSi: () => true },
+  { id: 'p_cat', etapa: 'posfirma', texto: 'Aviso a catastro (traslado de dominio)', resp: 'Gestor', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, aplicaSi: () => true },
+  { id: 'p_pld', etapa: 'posfirma', texto: 'Aviso LFPIORPI (si se rebasa el umbral)', resp: 'Titular', plazo: { tipo: 'dia17' }, tipo: VERIF, nota: 'Día 17 del mes siguiente', aplicaSi: () => true },
+  { id: 'p_rnie', etapa: 'posfirma', texto: 'Aviso a la SRE / inscripción en el RNIE', resp: 'Proyectista', plazo: { ref: 'firma', dias: 30 }, tipo: VERIF, aplicaSi: e => e.compradorExtranjero || esMor(e.compradorTipo) && e.compradorExtranjero },
+  { id: 'p_test', etapa: 'posfirma', texto: 'Armar testimonio y apéndice (con Notaría 37)', resp: 'Proyectista', plazo: { ref: 'firma', dias: 10 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 'p_rpp', etapa: 'posfirma', texto: 'Inscripción en el RPP (portal notarial digital)', resp: 'Gestor', plazo: { ref: 'firma', dias: 30 }, tipo: VERIF, nota: 'Dentro de la vigencia del aviso preventivo', aplicaSi: () => true },
+  { id: 'p_canc', etapa: 'posfirma', texto: 'Inscribir cancelación de la hipoteca anterior', resp: 'Gestor', plazo: { ref: 'firma', dias: 30 }, tipo: VERIF, aplicaSi: e => e.inmuebleGravado },
+  { id: 'p_inst', etapa: 'posfirma', texto: 'Entregar testimonio inscrito a la institución acreditante', resp: 'Proyectista', plazo: { ref: 'firma', dias: 45 }, tipo: INTERNO, aplicaSi: e => e.pago === 'hipoteca' },
+  { id: 'p_ent', etapa: 'posfirma', texto: 'Entregar testimonio al cliente, recabar acuse y CFDI de honorarios', resp: 'Recepción', plazo: { ref: 'firma', dias: 45 }, tipo: INTERNO, aplicaSi: () => true },
+];
+const ETAPAS = { prefirma: 'Antes de la firma', firma: 'Firma', posfirma: 'Después de la firma' };
+
+/* =========================================================================
+   4. FECHAS
+   ========================================================================= */
+const hoyISO = () => toISO(new Date());
+function toISO(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function parseISO(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function addDays(s, n) { const d = parseISO(s); d.setDate(d.getDate() + n); return toISO(d); }
+function diffDays(a, b) { return Math.round((parseISO(a) - parseISO(b)) / 864e5); }
+function fmt(s) { return s ? parseISO(s).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
+
+function fechaLimite(regla, exp) {
+  const p = regla.plazo;
+  if (p.tipo === 'dia17') { const d = parseISO(exp.fechaFirma); return toISO(new Date(d.getFullYear(), d.getMonth() + 1, 17)); }
+  return addDays(p.ref === 'alta' ? exp.fechaAlta : exp.fechaFirma, p.dias);
+}
+
+/* =========================================================================
+   5. ESTADO Y PERSISTENCIA (solo en este navegador)
+   ========================================================================= */
+const KEY = 'n41-expedientes-v1';
+let DB = { expedientes: [] };
+try { DB = JSON.parse(localStorage.getItem(KEY)) || DB; } catch (e) { /* sin almacenamiento */ }
+function guardar() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { toast('No se pudo guardar en este navegador'); } }
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2000); }
+
+/* =========================================================================
+   6. CÁLCULO DEL EXPEDIENTE
+   ========================================================================= */
+function requisitosDe(exp) { return REQUISITOS.filter(r => r.aplicaSi(exp)); }
+function tareasDe(exp) {
+  return TAREAS.filter(t => t.aplicaSi(exp)).map(t => {
+    const st = exp.tareas[t.id] || {};
+    const done = t.auto === 'requisitos' ? requisitosCompletos(exp) : !!st.hecho;
+    return { ...t, fecha: st.fecha || fechaLimite(t, exp), ajustada: !!st.fecha, hecho: done, resp: st.resp || t.resp };
+  }).sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+function requisitosCompletos(exp) { return requisitosDe(exp).every(r => (exp.requisitos[r.id] || {}).recibido); }
+
+function semaforo(fecha, hecho) {
+  if (hecho) return 'done';
+  const d = diffDays(fecha, hoyISO());
+  if (d < 0) return 'red';
+  if (d <= 3) return 'amber';
+  return 'green';
+}
+function resumen(exp) {
+  const reqs = requisitosDe(exp), tareas = tareasDe(exp);
+  const reqOk = reqs.filter(r => (exp.requisitos[r.id] || {}).recibido).length;
+  const tarOk = tareas.filter(t => t.hecho).length;
+  const pend = tareas.filter(t => !t.hecho);
+  const vencidas = pend.filter(t => semaforo(t.fecha) === 'red').length;
+  const proximas = pend.filter(t => semaforo(t.fecha) === 'amber').length;
+  const avance = Math.round(100 * (reqOk + tarOk) / (reqs.length + tareas.length));
+  return { reqs, tareas, reqOk, tarOk, vencidas, proximas, avance, siguiente: pend[0] };
+}
+function pillEstado(r) {
+  if (r.avance === 100) return '<span class="pill gray">Concluido</span>';
+  if (r.vencidas) return `<span class="pill red">${r.vencidas} vencida${r.vencidas > 1 ? 's' : ''}</span>`;
+  if (r.proximas) return `<span class="pill amber">${r.proximas} por vencer</span>`;
+  return '<span class="pill green">Al día</span>';
+}
+function tagPlazo(t) {
+  return t.tipo === VERIF ? '<span class="tag verif" title="Término legal pendiente de verificar en fuente oficial">🟡 plazo por verificar</span>'
+                          : '<span class="tag" title="Práctica interna de la notaría">práctica interna</span>';
+}
+function descVariables(e) {
+  const p = t => t === 'moral' ? 'persona moral' : 'persona física';
+  const out = [`Vendedor: ${p(e.vendedorTipo)}`, `Comprador: ${p(e.compradorTipo)}${e.compradorExtranjero ? ' extranjera' : ''}`,
+    e.pago === 'hipoteca' ? `Crédito hipotecario (${e.acreedor === 'banco' ? 'banco' : e.acreedor.toUpperCase()})` : 'De contado'];
+  if (e.condominio) out.push('Condominio');
+  if (e.zonaRestringida) out.push('Zona restringida');
+  if (e.ejidal) out.push('Origen ejidal');
+  if (e.inmuebleGravado) out.push('Con hipoteca previa');
+  if (e.apoderado) out.push('Con apoderado');
+  if (e.exencionISR) out.push('Exención ISR');
+  return out;
+}
+
+/* =========================================================================
+   7. VISTAS
+   ========================================================================= */
+const app = document.getElementById('app');
+let vista = 'lista', actual = null, filtroAgenda = 'semana';
+
+function ir(v, id) { vista = v; actual = id ?? null; render(); window.scrollTo(0, 0); }
+
+function render() {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.view === vista || (vista === 'editar' && b.dataset.view === 'alta')));
+  ({ lista: vLista, agenda: vAgenda, alta: vForm, editar: vForm, detalle: vDetalle, respaldo: vRespaldo })[vista]();
+}
+
+// ---- Lista de expedientes
+function vLista() {
+  const exps = DB.expedientes.map(e => ({ e, r: resumen(e) }))
+    .sort((a, b) => (b.r.vencidas - a.r.vencidas) || a.e.fechaFirma.localeCompare(b.e.fechaFirma));
+  app.innerHTML = `
+    <div class="row"><div><h2>Expedientes en trámite</h2><p class="sub">Compraventas ordenadas por urgencia. Haga clic en un expediente para ver su checklist y cronograma.</p></div>
+      <div class="spacer"></div><button class="btn primary" onclick="ir('alta')">+ Nuevo expediente</button></div>
+    ${exps.length ? `<div class="card"><table>
+      <thead><tr><th>Expediente</th><th class="hide-sm">Firma</th><th>Estado</th><th class="hide-sm">Avance</th><th class="hide-sm">Siguiente tarea</th></tr></thead>
+      <tbody>${exps.map(({ e, r }) => `
+        <tr class="click" onclick="ir('detalle','${e.id}')">
+          <td><strong>${esc(e.numero)}</strong><div class="why">${esc(e.alias)}</div></td>
+          <td class="hide-sm">${fmt(e.fechaFirma)}</td>
+          <td>${pillEstado(r)}</td>
+          <td class="hide-sm"><div class="bar"><i style="width:${r.avance}%"></i></div><span class="why">${r.avance}%</span></td>
+          <td class="hide-sm">${r.siguiente ? `${esc(r.siguiente.texto)}<div class="why">${fmt(r.siguiente.fecha)}</div>` : '—'}</td>
+        </tr>`).join('')}</tbody></table></div>`
+    : `<div class="card empty"><p>Aún no hay expedientes.</p>
+        <div class="row" style="justify-content:center"><button class="btn primary" onclick="ir('alta')">Crear el primero</button>
+        <button class="btn" onclick="cargarEjemplos()">Cargar 3 expedientes de ejemplo</button></div></div>`}`;
+}
+
+// ---- Alta / edición
+function vForm() {
+  const e = vista === 'editar' ? DB.expedientes.find(x => x.id === actual) : {
+    numero: '', alias: '', vendedorTipo: 'fisica', vendedorCivil: 'soltero', compradorTipo: 'fisica', compradorCasado: false,
+    compradorExtranjero: false, pago: 'contado', acreedor: 'banco', condominio: false, zonaRestringida: false, ejidal: false,
+    inmuebleGravado: false, apoderado: false, exencionISR: false, municipio: '', fechaAlta: hoyISO(), fechaFirma: addDays(hoyISO(), 21)
+  };
+  const sel = (n, opts) => `<select name="${n}">${opts.map(([v, l]) => `<option value="${v}" ${e[n] === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const chk = (n, l) => `<label class="check"><input type="checkbox" name="${n}" ${e[n] ? 'checked' : ''}> ${l}</label>`;
+  app.innerHTML = `
+    <h2>${vista === 'editar' ? 'Editar expediente' : 'Nuevo expediente de compraventa'}</h2>
+    <p class="sub">Las respuestas determinan qué requisitos se piden al cliente y qué tareas entran al cronograma.</p>
+    <div class="notice">Por privacidad, use un número interno y un alias o iniciales; no capture datos personales de los otorgantes.</div>
+    <form id="f" class="card pad">
+      <fieldset><legend>Identificación</legend><div class="grid">
+        <label class="f">Número interno <input name="numero" required value="${esc(e.numero)}" placeholder="CV-2026-014"></label>
+        <label class="f">Alias / iniciales <input name="alias" value="${esc(e.alias)}" placeholder="J.P. → M.R."></label>
+        <label class="f">Municipio (ISABI) <input name="municipio" value="${esc(e.municipio)}" placeholder="Bahía de Banderas"></label>
+        <label class="f">Fecha de alta <input type="date" name="fechaAlta" required value="${e.fechaAlta}"></label>
+        <label class="f">Fecha de firma programada <input type="date" name="fechaFirma" required value="${e.fechaFirma}"></label>
+      </div></fieldset>
+      <div class="two">
+        <fieldset><legend>Vendedor</legend>
+          <label class="f">Tipo ${sel('vendedorTipo', [['fisica', 'Persona física'], ['moral', 'Persona moral']])}</label>
+          <label class="f" style="margin-top:10px">Estado civil (si es persona física) ${sel('vendedorCivil', [['soltero', 'Soltero(a)'], ['sociedad', 'Casado(a) — sociedad conyugal'], ['separacion', 'Casado(a) — separación de bienes']])}</label>
+          ${chk('exencionISR', 'Solicita exención de ISR por casa habitación')}
+        </fieldset>
+        <fieldset><legend>Comprador</legend>
+          <label class="f">Tipo ${sel('compradorTipo', [['fisica', 'Persona física'], ['moral', 'Persona moral']])}</label>
+          ${chk('compradorCasado', 'Casado(a)')}
+          ${chk('compradorExtranjero', 'Es extranjero')}
+        </fieldset>
+        <fieldset><legend>Forma de pago</legend>
+          ${sel('pago', [['contado', 'De contado (recursos propios)'], ['hipoteca', 'Crédito con garantía hipotecaria']])}
+          <label class="f" style="margin-top:10px">Institución acreditante ${sel('acreedor', [['banco', 'Banco'], ['infonavit', 'INFONAVIT'], ['fovissste', 'FOVISSSTE']])}</label>
+        </fieldset>
+        <fieldset><legend>Inmueble y partes</legend>
+          ${chk('condominio', 'Está en régimen de propiedad en condominio')}
+          ${chk('zonaRestringida', 'Está en zona restringida (costa/frontera)')}
+          ${chk('ejidal', 'Es de origen ejidal')}
+          ${chk('inmuebleGravado', 'Tiene hipoteca vigente que se cancelará')}
+          ${chk('apoderado', 'Alguna parte actúa por apoderado')}
+        </fieldset>
+      </div>
+      <div class="row"><button class="btn primary" type="submit">${vista === 'editar' ? 'Guardar cambios' : 'Crear expediente'}</button>
+        <button class="btn" type="button" onclick="${vista === 'editar' ? `ir('detalle','${e.id}')` : `ir('lista')`}">Cancelar</button></div>
+    </form>`;
+  document.getElementById('f').onsubmit = ev => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target), datos = {};
+    ['numero', 'alias', 'municipio', 'fechaAlta', 'fechaFirma', 'vendedorTipo', 'vendedorCivil', 'compradorTipo', 'pago', 'acreedor'].forEach(k => datos[k] = fd.get(k).trim());
+    ['exencionISR', 'compradorCasado', 'compradorExtranjero', 'condominio', 'zonaRestringida', 'ejidal', 'inmuebleGravado', 'apoderado'].forEach(k => datos[k] = fd.has(k));
+    if (datos.vendedorTipo === 'moral') datos.exencionISR = false;
+    if (vista === 'editar') { Object.assign(e, datos); guardar(); toast('Expediente actualizado'); ir('detalle', e.id); }
+    else { const n = { id: uid(), ...datos, requisitos: {}, tareas: {} }; DB.expedientes.push(n); guardar(); toast('Expediente creado'); ir('detalle', n.id); }
+  };
+}
+
+// ---- Detalle
+function vDetalle() {
+  const e = DB.expedientes.find(x => x.id === actual); if (!e) return ir('lista');
+  const r = resumen(e);
+  const grupos = ['Vendedor', 'Comprador', 'Operación', 'Inmueble'];
+  const box = (rid, k, l) => `<label><input type="checkbox" ${(e.requisitos[rid] || {})[k] ? 'checked' : ''} onchange="setReq('${rid}','${k}',this.checked)"> ${l}</label>`;
+  let etapaPrev = null;
+  app.innerHTML = `
+    <div class="row"><button class="btn" onclick="ir('lista')">← Expedientes</button><div class="spacer"></div>
+      <button class="btn" onclick="ir('editar','${e.id}')">Editar variables</button>
+      <button class="btn danger" onclick="borrar('${e.id}')">Eliminar</button></div>
+    <div style="margin:16px 0 4px" class="row"><h2>${esc(e.numero)}</h2> ${pillEstado(r)}</div>
+    <p class="sub">${esc(e.alias)}${e.municipio ? ' · ' + esc(e.municipio) : ''} · Firma: <strong>${fmt(e.fechaFirma)}</strong> · Avance ${r.avance}%</p>
+    <div class="summary">${descVariables(e).map(v => `<span class="tag" style="margin:0">${esc(v)}</span>`).join('')}</div>
+    <div class="two" style="margin-top:8px">
+      <section>
+        <div class="row"><h3>Requisitos al cliente · ${r.reqOk}/${r.reqs.length}</h3><div class="spacer"></div>
+          <button class="btn" onclick="copiarLista('${e.id}')">Copiar lista para WhatsApp/correo</button></div>
+        <div class="card pad">${grupos.map(g => {
+          const rs = r.reqs.filter(x => x.grupo === g); if (!rs.length) return '';
+          return `<div style="font-weight:700;margin-top:6px">${g}</div>` + rs.map(x => {
+            const st = e.requisitos[x.id] || {};
+            return `<div class="req ${st.recibido ? 'done' : ''}"><div><span class="t">${esc(x.texto)}</span>${x.why ? `<div class="why">Aplica por: ${esc(x.why)}</div>` : ''}</div>
+              <div class="boxes">${box(x.id, 'pedido', 'Pedido')}${box(x.id, 'recibido', 'Recibido')}${box(x.id, 'cotejado', 'Cotejado')}</div></div>`;
+          }).join('');
+        }).join('')}</div>
+      </section>
+      <section>
+        <h3>Cronograma · ${r.tarOk}/${r.tareas.length}</h3>
+        <div class="card pad"><div class="timeline">${r.tareas.map(t => {
+          const s = semaforo(t.fecha, t.hecho), d = diffDays(t.fecha, hoyISO());
+          const phase = t.etapa !== etapaPrev ? `<div class="phase">${ETAPAS[(etapaPrev = t.etapa)]}</div>` : '';
+          const cuando = t.hecho ? 'Hecho' : d < 0 ? `Vencida hace ${-d} día${d === -1 ? '' : 's'}` : d === 0 ? 'Vence hoy' : `Faltan ${d} día${d === 1 ? '' : 's'}`;
+          return `${phase}<div class="step ${s} ${t.etapa === 'firma' ? 'firma' : ''}">
+            <div class="line1"><label class="check" style="padding:0"><input type="checkbox" ${t.hecho ? 'checked' : ''} ${t.auto ? 'disabled title="Se marca solo al recibir todos los requisitos"' : ''} onchange="setTarea('${t.id}','hecho',this.checked)">
+              <span class="ttl">${esc(t.texto)}</span></label></div>
+            <div class="meta"><input type="date" value="${t.fecha}" onchange="setTarea('${t.id}','fecha',this.value)" title="Ajustar fecha límite">
+              <span class="pill ${s === 'done' ? 'gray' : s}">${cuando}</span>
+              <select onchange="setTarea('${t.id}','resp',this.value)">${RESPONSABLES.map(x => `<option ${x === t.resp ? 'selected' : ''}>${x}</option>`).join('')}</select>
+              ${tagPlazo(t)} ${t.ajustada ? '<span class="tag">fecha ajustada</span>' : ''}</div>
+            ${t.nota ? `<div class="why">${esc(t.nota)}</div>` : ''}
+          </div>`;
+        }).join('')}</div></div>
+      </section>
+    </div>`;
+}
+function exp() { return DB.expedientes.find(x => x.id === actual); }
+function setReq(rid, k, v) { const e = exp(); e.requisitos[rid] = { ...(e.requisitos[rid] || {}), [k]: v }; if (k === 'cotejado' && v) e.requisitos[rid].recibido = true; if (k === 'recibido' && v) e.requisitos[rid].pedido = true; guardar(); render(); }
+function setTarea(tid, k, v) { const e = exp(); e.tareas[tid] = { ...(e.tareas[tid] || {}), [k]: v }; guardar(); render(); }
+function borrar(id) { if (!confirm('¿Eliminar este expediente? No se puede deshacer.')) return; DB.expedientes = DB.expedientes.filter(x => x.id !== id); guardar(); toast('Expediente eliminado'); ir('lista'); }
+
+function copiarLista(id) {
+  const e = DB.expedientes.find(x => x.id === id);
+  const pend = requisitosDe(e).filter(r => !(e.requisitos[r.id] || {}).recibido);
+  const grupos = [...new Set(pend.map(r => r.grupo))];
+  const txt = `*Notaría Pública 41*\nRequisitos para su escritura de compraventa (exp. ${e.numero}):\n\n` +
+    grupos.map(g => `*${g}*\n` + pend.filter(r => r.grupo === g).map(r => `• ${r.texto.replace(/\s*\(🟡[^)]*\)/, '')}`).join('\n')).join('\n\n') +
+    `\n\nPuede enviarlos escaneados; los originales se exhiben el día de la firma para su cotejo.`;
+  const ok = () => { pend.forEach(r => e.requisitos[r.id] = { ...(e.requisitos[r.id] || {}), pedido: true }); guardar(); render(); toast('Lista copiada; requisitos marcados como pedidos'); };
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(ok, () => { prompt('Copie la lista:', txt); ok(); });
+}
+
+// ---- Agenda global
+function vAgenda() {
+  const hoy = hoyISO();
+  let items = DB.expedientes.flatMap(e => tareasDe(e).filter(t => !t.hecho).map(t => ({ e, t })))
+    .sort((a, b) => a.t.fecha.localeCompare(b.t.fecha));
+  if (filtroAgenda === 'vencidas') items = items.filter(x => x.t.fecha < hoy);
+  if (filtroAgenda === 'semana') items = items.filter(x => diffDays(x.t.fecha, hoy) <= 7);
+  const f = (k, l) => `<button class="btn ${filtroAgenda === k ? 'on' : ''}" onclick="filtroAgenda='${k}';render()">${l}</button>`;
+  app.innerHTML = `<h2>Agenda de plazos</h2><p class="sub">Tareas pendientes de todos los expedientes, ordenadas por fecha límite.</p>
+    <div class="row filters" style="margin-bottom:14px">${f('vencidas', 'Vencidas')}${f('semana', 'Próximos 7 días')}${f('todo', 'Todo')}</div>
+    ${items.length ? `<div class="card"><table><thead><tr><th>Fecha límite</th><th>Tarea</th><th class="hide-sm">Expediente</th><th class="hide-sm">Responsable</th></tr></thead><tbody>
+      ${items.map(({ e, t }) => { const s = semaforo(t.fecha); return `<tr class="click" onclick="ir('detalle','${e.id}')">
+        <td><span class="pill ${s}">${fmt(t.fecha)}</span></td><td>${esc(t.texto)} ${t.tipo === VERIF ? '<span class="tag verif">🟡</span>' : ''}</td>
+        <td class="hide-sm">${esc(e.numero)}</td><td class="hide-sm">${esc(t.resp)}</td></tr>`; }).join('')}
+    </tbody></table></div>` : `<div class="card empty">Nada pendiente en este filtro. 👌</div>`}`;
+}
+
+// ---- Respaldo
+function vRespaldo() {
+  app.innerHTML = `<h2>Respaldo</h2><p class="sub">Los expedientes se guardan solo en este navegador. Exporte un respaldo con regularidad.</p>
+    <div class="card pad"><div class="row">
+      <button class="btn primary" onclick="exportar()">Exportar respaldo (JSON)</button>
+      <label class="btn">Importar respaldo<input type="file" accept="application/json" style="display:none" onchange="importar(this.files[0])"></label>
+      <button class="btn" onclick="cargarEjemplos()">Cargar expedientes de ejemplo</button>
+      <button class="btn danger" onclick="if(confirm('¿Borrar todos los expedientes de este navegador?')){DB.expedientes=[];guardar();toast('Datos borrados');ir('lista')}">Borrar todo</button>
+    </div></div>
+    <h3>Sobre los plazos</h3><div class="card pad why" style="font-size:14px">
+      <p><span class="tag verif">🟡 plazo por verificar</span> Término legal tomado del vault de la notaría que aún no se ha verificado en fuente oficial. La fecha es una propuesta editable.</p>
+      <p><span class="tag">práctica interna</span> Plazo de organización de la notaría, no un término legal.</p></div>`;
+}
+function exportar() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' }));
+  a.download = `expedientes-n41-${hoyISO()}.json`; a.click(); URL.revokeObjectURL(a.href);
+}
+function importar(file) {
+  if (!file) return;
+  file.text().then(t => { const d = JSON.parse(t); if (!Array.isArray(d.expedientes)) throw 0; DB = d; guardar(); toast(`${d.expedientes.length} expedientes importados`); ir('lista'); })
+    .catch(() => toast('El archivo no es un respaldo válido'));
+}
+
+// ---- Ejemplos ficticios para la demo
+function cargarEjemplos() {
+  const h = hoyISO(), base = { requisitos: {}, tareas: {}, municipio: 'Tepic', vendedorCivil: 'soltero', compradorCasado: false, compradorExtranjero: false,
+    acreedor: 'banco', condominio: false, zonaRestringida: false, ejidal: false, inmuebleGravado: false, apoderado: false, exencionISR: false };
+  const ej = [
+    { ...base, id: uid(), numero: 'CV-DEMO-01', alias: 'Física → física, de contado', vendedorTipo: 'fisica', vendedorCivil: 'sociedad', compradorTipo: 'fisica', pago: 'contado', exencionISR: true, fechaAlta: addDays(h, -20), fechaFirma: addDays(h, 2) },
+    { ...base, id: uid(), numero: 'CV-DEMO-02', alias: 'Moral → física, con crédito bancario', vendedorTipo: 'moral', compradorTipo: 'fisica', compradorCasado: true, pago: 'hipoteca', inmuebleGravado: true, fechaAlta: addDays(h, -5), fechaFirma: addDays(h, 18) },
+    { ...base, id: uid(), numero: 'CV-DEMO-03', alias: 'Física → extranjero, condominio en la costa', municipio: 'Bahía de Banderas', vendedorTipo: 'fisica', compradorTipo: 'fisica', compradorExtranjero: true, pago: 'contado', condominio: true, zonaRestringida: true, apoderado: true, fechaAlta: addDays(h, -60), fechaFirma: addDays(h, -20) },
+  ];
+  ej.forEach(x => { x.requisitos = {}; x.tareas = {}; });
+  // Avances simulados para que la demo muestre distintos estados
+  ['v_ine', 'v_curp', 'v_csf', 'v_nac', 'v_mat', 'i_tit', 'i_pred'].forEach(k => ej[0].requisitos[k] = { pedido: true, recibido: true });
+  ['t_lista', 't_asig', 't_presu', 't_clg', 't_aval', 't_nopred', 't_proy'].forEach(k => ej[0].tareas[k] = { hecho: true });
+  ['t_lista', 't_asig', 't_presu', 't_clg', 't_aval'].forEach(k => ej[1].tareas[k] = { hecho: true });
+  ['vm_acta', 'vm_poder', 'o_hip1'].forEach(k => ej[1].requisitos[k] = { pedido: true, recibido: true });
+  REQUISITOS.forEach(r => ej[2].requisitos[r.id] = { pedido: true, recibido: true, cotejado: true });
+  TAREAS.filter(t => t.etapa !== 'posfirma').forEach(t => ej[2].tareas[t.id] = { hecho: true });
+  ['p_test', 'p_isr', 'p_cfdi'].forEach(k => ej[2].tareas[k] = { hecho: true });
+  DB.expedientes.push(...ej); guardar(); toast('3 expedientes de ejemplo cargados'); ir('lista');
+}
+
+/* =========================================================================
+   8. ARRANQUE
+   ========================================================================= */
+document.getElementById('nav').onclick = ev => { const v = ev.target.dataset.view; if (v) ir(v); };
+document.getElementById('btnTheme').onclick = () => {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme = dark ? 'light' : 'dark'; try { localStorage.setItem('n41-tema', r.dataset.theme); } catch (e) {}
+};
+try { const t = localStorage.getItem('n41-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+render();
+</script>
+</body>
+</html>
