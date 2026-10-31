@@ -64,6 +64,7 @@ tr.click { cursor: pointer; } tr.click:hover td { background: var(--surface-2); 
 .pill.gray { background: var(--surface-2); color: var(--muted); }
 .tag { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted); margin-left: 4px; }
 .tag.verif { background: var(--yellow-soft); color: var(--amber); }
+.tag.ok { background: var(--green-soft); color: var(--green); }
 .bar { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; min-width: 80px; }
 .bar > i { display: block; height: 100%; background: var(--accent); }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
@@ -131,89 +132,88 @@ legend { font-weight: 600; padding: 0 6px; }
    ========================================================================= */
 const RESPONSABLES = ['Recepción', 'Proyectista', 'Titular', 'Contador', 'Gestor'];
 
+// Datos de contacto que aparecen en la lista que se envía al cliente
+const NOTARIA = { correo: 'notaria41nay@gmail.com', whatsapp: '311 340 75 98' };
+
 // Tipo de plazo:
-//   'interno'   → práctica de la notaría (no es un término legal)
-//   'verificar' → término legal pendiente de verificar en fuente oficial (🟡)
-const VERIF = 'verificar', INTERNO = 'interno';
+//   'verificado' → término legal verificado en la ley (🟢, lleva su fundamento)
+//   'verificar'  → término legal pendiente de verificar en fuente oficial (🟡)
+//   'interno'    → práctica de la notaría (no es un término legal)
+const VERIFICADO = 'verificado', VERIF = 'verificar', INTERNO = 'interno';
 
 /* =========================================================================
    2. REGLAS — requisitos que se piden al cliente
-   Cada regla: id, grupo, texto, aplicaSi(exp), por qué aplica (why).
+   Base: «Requisitos escrituras_Not 41» (actos traslativos de dominio).
+   Las reglas marcadas con propuesta: true NO están en esa lista: son
+   complementos por variable, pendientes de validar por el titular.
    ========================================================================= */
 const esFis = t => t === 'fisica', esMor = t => t === 'moral';
 const REQUISITOS = [
-  // ---- Vendedor persona física
-  { id: 'v_ine', grupo: 'Vendedor', texto: 'Identificación oficial vigente (INE o pasaporte)', aplicaSi: e => esFis(e.vendedorTipo) },
-  { id: 'v_curp', grupo: 'Vendedor', texto: 'CURP', aplicaSi: e => esFis(e.vendedorTipo) },
-  { id: 'v_csf', grupo: 'Vendedor', texto: 'Constancia de situación fiscal (RFC) reciente', aplicaSi: e => esFis(e.vendedorTipo) },
-  { id: 'v_nac', grupo: 'Vendedor', texto: 'Acta de nacimiento', aplicaSi: e => esFis(e.vendedorTipo) },
+  // ---- Parte enajenante (vendedor)
+  { id: 'v_ine', grupo: 'Vendedor', texto: 'Identificación oficial vigente con fotografía (INE o pasaporte; originales al momento de firmar)', aplicaSi: e => esFis(e.vendedorTipo) },
   { id: 'v_mat', grupo: 'Vendedor', texto: 'Acta de matrimonio', aplicaSi: e => esFis(e.vendedorTipo) && e.vendedorCivil !== 'soltero', why: 'Vendedor casado' },
-  { id: 'v_cony', grupo: 'Vendedor', texto: 'Comparecencia del cónyuge (identificación, CURP, CSF) para otorgar su consentimiento', aplicaSi: e => esFis(e.vendedorTipo) && e.vendedorCivil === 'sociedad', why: 'Casado en sociedad conyugal' },
-  { id: 'v_dom', grupo: 'Vendedor', texto: 'Comprobante de domicilio reciente', aplicaSi: e => esFis(e.vendedorTipo) },
-  // ---- Vendedor persona moral
-  { id: 'vm_acta', grupo: 'Vendedor', texto: 'Acta constitutiva con datos de inscripción en el RPC', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
-  { id: 'vm_poder', grupo: 'Vendedor', texto: 'Poder del representante con facultades de dominio', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
-  { id: 'vm_ine', grupo: 'Vendedor', texto: 'Identificación oficial del representante legal', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
-  { id: 'vm_csf', grupo: 'Vendedor', texto: 'Constancia de situación fiscal de la sociedad', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
-  { id: 'vm_asam', grupo: 'Vendedor', texto: 'Acta de asamblea o consejo que autorice la venta (si los estatutos lo exigen)', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
-  { id: 'vm_bc', grupo: 'Vendedor', texto: 'Declaración de beneficiario controlador', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral · LFPIORPI' },
-  // ---- Exención ISR
-  { id: 'v_exe1', grupo: 'Vendedor', texto: 'Comprobantes de que el inmueble es su casa habitación (domicilio en CSF/INE, recibos)', aplicaSi: e => esFis(e.vendedorTipo) && e.exencionISR, why: 'Solicita exención de ISR' },
-  { id: 'v_exe2', grupo: 'Vendedor', texto: 'Manifestación de no haber aplicado la exención en el plazo legal (🟡 verificar plazo)', aplicaSi: e => esFis(e.vendedorTipo) && e.exencionISR, why: 'Solicita exención de ISR' },
-  // ---- Comprador persona física
-  { id: 'c_ine', grupo: 'Comprador', texto: 'Identificación oficial vigente', aplicaSi: e => esFis(e.compradorTipo) && !e.compradorExtranjero },
-  { id: 'c_curp', grupo: 'Comprador', texto: 'CURP', aplicaSi: e => esFis(e.compradorTipo) && !e.compradorExtranjero },
-  { id: 'c_csf', grupo: 'Comprador', texto: 'Constancia de situación fiscal (RFC) reciente', aplicaSi: e => esFis(e.compradorTipo) },
-  { id: 'c_nac', grupo: 'Comprador', texto: 'Acta de nacimiento', aplicaSi: e => esFis(e.compradorTipo) && !e.compradorExtranjero },
-  { id: 'c_mat', grupo: 'Comprador', texto: 'Acta de matrimonio y régimen patrimonial', aplicaSi: e => esFis(e.compradorTipo) && e.compradorCasado, why: 'Comprador casado' },
-  { id: 'c_dom', grupo: 'Comprador', texto: 'Comprobante de domicilio reciente', aplicaSi: e => esFis(e.compradorTipo) },
-  { id: 'c_ext1', grupo: 'Comprador', texto: 'Pasaporte vigente y documento migratorio (tarjeta de residente o FMM)', aplicaSi: e => e.compradorExtranjero, why: 'Comprador extranjero' },
-  { id: 'c_ext2', grupo: 'Comprador', texto: 'Elección de institución fiduciaria y datos para el fideicomiso', aplicaSi: e => e.compradorExtranjero && e.zonaRestringida, why: 'Extranjero en zona restringida' },
-  { id: 'c_ext3', grupo: 'Comprador', texto: 'Convenio de renuncia (cláusula Calvo) ante la SRE (🟡 verificar procedencia)', aplicaSi: e => e.compradorExtranjero && !e.zonaRestringida, why: 'Extranjero fuera de zona restringida' },
-  // ---- Comprador persona moral
-  { id: 'cm_acta', grupo: 'Comprador', texto: 'Acta constitutiva con datos de inscripción en el RPC', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
-  { id: 'cm_poder', grupo: 'Comprador', texto: 'Poder del representante (actos de administración o dominio)', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
-  { id: 'cm_ine', grupo: 'Comprador', texto: 'Identificación oficial del representante legal', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
-  { id: 'cm_bc', grupo: 'Comprador', texto: 'Declaración de beneficiario controlador', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral · LFPIORPI' },
-  // ---- Ambas partes / operación
-  { id: 'o_kyc', grupo: 'Operación', texto: 'Formato de identificación del cliente (LFPIORPI) firmado por ambas partes', aplicaSi: () => true },
-  { id: 'o_rec', grupo: 'Operación', texto: 'Forma de pago y origen de los recursos (transferencias, cheques)', aplicaSi: () => true },
-  { id: 'o_apod', grupo: 'Operación', texto: 'Poder notarial vigente y suficiente + identificación del apoderado', aplicaSi: e => e.apoderado, why: 'Interviene apoderado' },
-  { id: 'o_hip1', grupo: 'Operación', texto: 'Carta de instrucción / asignación de crédito de la institución', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria' },
-  { id: 'o_hip2', grupo: 'Operación', texto: 'Avalúo de la institución acreditante', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria' },
-  { id: 'o_inf', grupo: 'Operación', texto: 'Constancia de crédito y precalificación (INFONAVIT/FOVISSSTE)', aplicaSi: e => e.pago === 'hipoteca' && e.acreedor !== 'banco', why: 'Crédito de vivienda institucional' },
+  { id: 'v_cony', grupo: 'Vendedor', texto: 'Comparecencia del cónyuge con su identificación, para otorgar su consentimiento', aplicaSi: e => esFis(e.vendedorTipo) && e.vendedorCivil === 'sociedad', why: 'Casado en sociedad conyugal', propuesta: true },
+  { id: 'v_dom', grupo: 'Vendedor', texto: 'Copia de comprobante de domicilio (no mayor a tres meses de antigüedad)', aplicaSi: e => esFis(e.vendedorTipo) },
+  { id: 'v_csf', grupo: 'Vendedor', texto: 'Constancia de situación fiscal (no mayor a tres meses de antigüedad)', aplicaSi: e => esFis(e.vendedorTipo) },
+  { id: 'v_gen', grupo: 'Vendedor', texto: 'Llenar formato de datos generales', aplicaSi: () => true },
+  { id: 'vm_acta', grupo: 'Vendedor', texto: 'Acta constitutiva (original o copia certificada) y, en su caso, actas de reformas estatutarias', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
+  { id: 'vm_csf', grupo: 'Vendedor', texto: 'Constancia de situación fiscal de la empresa', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
+  { id: 'vm_poder', grupo: 'Vendedor', texto: 'Poder con actos de dominio para el representante', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral' },
+  { id: 'vm_ine', grupo: 'Vendedor', texto: 'Identificación oficial vigente del representante', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral', propuesta: true },
+  { id: 'vm_bc', grupo: 'Vendedor', texto: 'Datos de identificación del beneficiario controlador', aplicaSi: e => esMor(e.vendedorTipo), why: 'Persona moral · LFPIORPI', propuesta: true },
+  { id: 'v_apod', grupo: 'Vendedor', texto: 'Si vende por medio de apoderado: poder original (o copia certificada) con actos de dominio', aplicaSi: e => e.apoderado, why: 'Interviene apoderado' },
+  { id: 'v_pagos', grupo: 'Vendedor', texto: 'Comprobante de los pagos que, en su caso, haya realizado el futuro comprador', aplicaSi: () => true },
+  { id: 'v_exe1', grupo: 'Vendedor', texto: 'Documentos que acrediten que el inmueble es su casa habitación', aplicaSi: e => esFis(e.vendedorTipo) && e.exencionISR, why: 'Solicita exención de ISR', propuesta: true },
+  { id: 'v_exe2', grupo: 'Vendedor', texto: 'Manifestar bajo protesta que no enajenó otra casa habitación con exención en los 3 años anteriores', aplicaSi: e => esFis(e.vendedorTipo) && e.exencionISR, why: 'Exención de ISR · LISR art. 93-XIX-a' },
+  // ---- Parte adquirente (comprador)
+  { id: 'c_ine', grupo: 'Comprador', texto: 'Identificación oficial vigente con fotografía (INE o pasaporte; originales al momento de firmar)', aplicaSi: e => esFis(e.compradorTipo) },
+  { id: 'c_curp', grupo: 'Comprador', texto: 'Copia de la Clave Única de Registro de Población (CURP)', aplicaSi: e => esFis(e.compradorTipo) && !e.compradorExtranjero },
+  { id: 'c_mat', grupo: 'Comprador', texto: 'Acta de matrimonio', aplicaSi: e => esFis(e.compradorTipo) && e.compradorCasado, why: 'Comprador casado' },
+  { id: 'c_dom', grupo: 'Comprador', texto: 'Copia de comprobante de domicilio (no mayor a tres meses de antigüedad)', aplicaSi: e => esFis(e.compradorTipo) },
+  { id: 'c_csf', grupo: 'Comprador', texto: 'Constancia de situación fiscal (no mayor a tres meses de antigüedad)', aplicaSi: e => esFis(e.compradorTipo) },
+  { id: 'c_gen', grupo: 'Comprador', texto: 'Llenar formato de datos generales', aplicaSi: () => true },
+  { id: 'cm_acta', grupo: 'Comprador', texto: 'Acta constitutiva (original o copia certificada) y, en su caso, actas de reformas estatutarias', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
+  { id: 'cm_csf', grupo: 'Comprador', texto: 'Constancia de situación fiscal de la empresa', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
+  { id: 'cm_poder', grupo: 'Comprador', texto: 'Poder con actos de administración o dominio para el representante', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral' },
+  { id: 'cm_bc', grupo: 'Comprador', texto: 'Datos de identificación del beneficiario controlador', aplicaSi: e => esMor(e.compradorTipo), why: 'Persona moral · LFPIORPI', propuesta: true },
+  { id: 'c_apod', grupo: 'Comprador', texto: 'Si compra por medio de apoderado: poder original (o copia certificada) con facultades suficientes', aplicaSi: e => e.apoderado, why: 'Interviene apoderado' },
+  { id: 'c_ext1', grupo: 'Comprador', texto: 'Pasaporte vigente y documento migratorio', aplicaSi: e => e.compradorExtranjero, why: 'Comprador extranjero', propuesta: true },
+  { id: 'c_ext2', grupo: 'Comprador', texto: 'Elección de institución fiduciaria y datos para el fideicomiso', aplicaSi: e => e.compradorExtranjero && e.zonaRestringida, why: 'Extranjero en zona restringida', propuesta: true },
+  // ---- Crédito
+  { id: 'o_hip1', grupo: 'Crédito', texto: 'Carta de instrucción / asignación de crédito de la institución', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria', propuesta: true },
+  { id: 'o_hip2', grupo: 'Crédito', texto: 'Avalúo de la institución acreditante', aplicaSi: e => e.pago === 'hipoteca', why: 'Crédito con garantía hipotecaria', propuesta: true },
+  { id: 'o_inf', grupo: 'Crédito', texto: 'Constancia de crédito y precalificación (INFONAVIT/FOVISSSTE)', aplicaSi: e => e.pago === 'hipoteca' && e.acreedor !== 'banco', why: 'Crédito de vivienda institucional', propuesta: true },
   // ---- Inmueble
-  { id: 'i_tit', grupo: 'Inmueble', texto: 'Escritura antecedente (título de propiedad) con datos de inscripción en el RPP', aplicaSi: () => true },
-  { id: 'i_pred', grupo: 'Inmueble', texto: 'Boleta del impuesto predial pagada del año en curso', aplicaSi: () => true },
-  { id: 'i_agua', grupo: 'Inmueble', texto: 'Recibo o constancia de no adeudo de agua', aplicaSi: () => true },
-  { id: 'i_plano', grupo: 'Inmueble', texto: 'Plano o deslinde catastral (si aplica)', aplicaSi: () => true },
-  { id: 'i_gravc', grupo: 'Inmueble', texto: 'Carta de adeudo o instrucción de cancelación del acreedor actual', aplicaSi: e => e.inmuebleGravado, why: 'El inmueble tiene hipoteca vigente' },
-  { id: 'i_cond1', grupo: 'Inmueble', texto: 'Escritura del régimen de propiedad en condominio y reglamento', aplicaSi: e => e.condominio, why: 'Condominio' },
-  { id: 'i_cond2', grupo: 'Inmueble', texto: 'Constancia de no adeudo de cuotas expedida por el administrador', aplicaSi: e => e.condominio, why: 'Condominio' },
-  { id: 'i_cond3', grupo: 'Inmueble', texto: 'Nombramiento vigente del administrador', aplicaSi: e => e.condominio, why: 'Condominio' },
-  { id: 'i_ejido', grupo: 'Inmueble', texto: 'Título de dominio pleno (RAN) y constancia del derecho del tanto (🟡 verificar)', aplicaSi: e => e.ejidal, why: 'Origen ejidal' },
+  { id: 'i_tit', grupo: 'Inmueble', texto: 'Antecedentes: escritura o título de propiedad (original o copia certificada)', aplicaSi: () => true },
+  { id: 'i_pred', grupo: 'Inmueble', texto: 'Pago predial (al corriente)', aplicaSi: () => true },
+  { id: 'i_agua', grupo: 'Inmueble', texto: 'Pago del agua (al corriente)', aplicaSi: () => true },
+  { id: 'i_gravc', grupo: 'Inmueble', texto: 'Carta de instrucción expedida por el acreedor para cancelar la hipoteca vigente', aplicaSi: e => e.inmuebleGravado, why: 'El inmueble tiene hipoteca vigente' },
+  { id: 'i_cond1', grupo: 'Inmueble', texto: 'Escritura del régimen de propiedad en condominio y reglamento', aplicaSi: e => e.condominio, why: 'Condominio', propuesta: true },
+  { id: 'i_cond2', grupo: 'Inmueble', texto: 'Constancia de no adeudo de cuotas expedida por el administrador', aplicaSi: e => e.condominio, why: 'Condominio', propuesta: true },
+  { id: 'i_ejido', grupo: 'Inmueble', texto: 'Título de dominio pleno (RAN) y constancia del derecho del tanto', aplicaSi: e => e.ejidal, why: 'Origen ejidal', propuesta: true },
 ];
+const GRUPOS = ['Vendedor', 'Comprador', 'Crédito', 'Inmueble'];
 
 /* =========================================================================
    3. REGLAS — cronograma (antes, durante y después de la firma)
-   plazo: { ref: 'alta'|'firma', dias } | { tipo: 'dia17' }
+   plazo: { ref: 'alta'|'firma', dias, habiles? } | { ref: 'tarea', tarea, dias } | { tipo: 'dia17' }
    ========================================================================= */
 const TAREAS = [
   // --- Prefirma
   { id: 't_lista', etapa: 'prefirma', texto: 'Enviar lista de requisitos al cliente', resp: 'Recepción', plazo: { ref: 'alta', dias: 0 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_asig', etapa: 'prefirma', texto: 'Asignar proyectista en el Control de trámites', resp: 'Titular', plazo: { ref: 'alta', dias: 1 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_presu', etapa: 'prefirma', texto: 'Elaborar y enviar presupuesto', resp: 'Proyectista', plazo: { ref: 'alta', dias: 2 }, tipo: INTERNO, aplicaSi: () => true },
-  { id: 't_clg', etapa: 'prefirma', texto: 'Solicitar certificado de libertad de gravamen y presentar aviso preventivo', resp: 'Gestor', plazo: { ref: 'alta', dias: 3 }, tipo: VERIF, nota: 'Vigencia del aviso preventivo por verificar', aplicaSi: () => true },
-  { id: 't_aval', etapa: 'prefirma', texto: 'Solicitar avalúo', resp: 'Proyectista', plazo: { ref: 'alta', dias: 3 }, tipo: INTERNO, aplicaSi: () => true },
+  { id: 't_clg', etapa: 'prefirma', texto: 'Presentar primer aviso preventivo y solicitar certificado de libertad de gravamen', resp: 'Gestor', plazo: { ref: 'alta', dias: 3 }, tipo: INTERNO, nota: 'Ajuste aquí la fecha real de presentación: de ella dependen la vigencia del aviso (30 días naturales) y las fechas del RPP.', aplicaSi: () => true },
+  { id: 't_aval', etapa: 'prefirma', texto: 'Avalúo validado por catastro (lo tramita la notaría o el cliente)', resp: 'Gestor', plazo: { ref: 'alta', dias: 3 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_reqok', etapa: 'prefirma', texto: 'Requisitos completos y cotejados', resp: 'Proyectista', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, auto: 'requisitos', aplicaSi: () => true },
   { id: 't_fide', etapa: 'prefirma', texto: 'Permiso SRE y aceptación de la fiduciaria para el fideicomiso', resp: 'Proyectista', plazo: { ref: 'firma', dias: -15 }, tipo: VERIF, aplicaSi: e => e.compradorExtranjero && e.zonaRestringida },
   { id: 't_ejido', etapa: 'prefirma', texto: 'Verificar dominio pleno y notificación del derecho del tanto', resp: 'Proyectista', plazo: { ref: 'firma', dias: -15 }, tipo: VERIF, aplicaSi: e => e.ejidal },
-  { id: 't_nopred', etapa: 'prefirma', texto: 'Obtener constancias de no adeudo (predial y agua)', resp: 'Gestor', plazo: { ref: 'firma', dias: -10 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_cond', etapa: 'prefirma', texto: 'Recabar constancia de no adeudo de cuotas condominales', resp: 'Gestor', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, aplicaSi: e => e.condominio },
   { id: 't_proy', etapa: 'prefirma', texto: 'Elaborar proyecto de escritura (EP #### PROYECTO)', resp: 'Proyectista', plazo: { ref: 'firma', dias: -7 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_inst', etapa: 'prefirma', texto: 'Enviar proyecto a la institución acreditante para visto bueno', resp: 'Proyectista', plazo: { ref: 'firma', dias: -6 }, tipo: INTERNO, aplicaSi: e => e.pago === 'hipoteca' },
   { id: 't_rev', etapa: 'prefirma', texto: 'Revisión del proyecto por el titular', resp: 'Titular', plazo: { ref: 'firma', dias: -5 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_poder', etapa: 'prefirma', texto: 'Verificar vigencia del poder (no revocación / RENAP)', resp: 'Proyectista', plazo: { ref: 'firma', dias: -5 }, tipo: INTERNO, aplicaSi: e => e.apoderado || esMor(e.vendedorTipo) || esMor(e.compradorTipo) },
+  { id: 't_exe', etapa: 'prefirma', texto: 'Consultar en el SAT si el vendedor aplicó la exención en los 5 años anteriores', resp: 'Contador', plazo: { ref: 'firma', dias: -3 }, tipo: INTERNO, fund: 'LISR art. 93-XIX-a', aplicaSi: e => esFis(e.vendedorTipo) && e.exencionISR },
   { id: 't_vobo', etapa: 'prefirma', texto: 'Visto bueno del cliente, despacho o gestor', resp: 'Proyectista', plazo: { ref: 'firma', dias: -3 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_pld', etapa: 'prefirma', texto: 'Identificación PLD: consulta de listas y umbral de aviso', resp: 'Proyectista', plazo: { ref: 'firma', dias: -3 }, tipo: INTERNO, aplicaSi: () => true },
   { id: 't_isr', etapa: 'prefirma', texto: 'Solicitar cálculo de ISR al contador', resp: 'Contador', plazo: { ref: 'firma', dias: -2 }, tipo: INTERNO, nota: 'Práctica: pedirlo con 1–2 días de anticipación', aplicaSi: () => true },
@@ -221,16 +221,17 @@ const TAREAS = [
   // --- Firma
   { id: 't_firma', etapa: 'firma', texto: 'Firma de la escritura y cotejo de originales', resp: 'Titular', plazo: { ref: 'firma', dias: 0 }, tipo: INTERNO, aplicaSi: () => true },
   // --- Posfirma
-  { id: 'p_isr', etapa: 'posfirma', texto: 'Enterar ISR por enajenación (y por adquisición, si procede)', resp: 'Contador', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, aplicaSi: () => true },
-  { id: 'p_cfdi', etapa: 'posfirma', texto: 'Emitir CFDI de retenciones / constancias', resp: 'Contador', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, aplicaSi: () => true },
-  { id: 'p_dnot', etapa: 'posfirma', texto: 'Presentar DeclaraNOT', resp: 'Contador', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, aplicaSi: () => true },
-  { id: 'p_isabi', etapa: 'posfirma', texto: 'Pagar ISABI y presentar aviso de transmisión', resp: 'Gestor', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, nota: 'Depende del municipio', aplicaSi: () => true },
-  { id: 'p_cat', etapa: 'posfirma', texto: 'Aviso a catastro (traslado de dominio)', resp: 'Gestor', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, aplicaSi: () => true },
-  { id: 'p_pld', etapa: 'posfirma', texto: 'Aviso LFPIORPI (si se rebasa el umbral)', resp: 'Titular', plazo: { tipo: 'dia17' }, tipo: VERIF, nota: 'Día 17 del mes siguiente', aplicaSi: () => true },
-  { id: 'p_rnie', etapa: 'posfirma', texto: 'Aviso a la SRE / inscripción en el RNIE', resp: 'Proyectista', plazo: { ref: 'firma', dias: 30 }, tipo: VERIF, aplicaSi: e => e.compradorExtranjero || esMor(e.compradorTipo) && e.compradorExtranjero },
+  { id: 'p_avdef', etapa: 'posfirma', texto: 'Presentar aviso preventivo definitivo en el RPP', resp: 'Gestor', plazo: { ref: 'tarea', tarea: 't_clg', dias: 30 }, tipo: VERIFICADO, fund: 'Ley del RPP Nay. art. 91-II', nota: 'Después de la firma y dentro de los 30 días naturales de vigencia del primer aviso.', aplicaSi: () => true },
+  { id: 'p_isr', etapa: 'posfirma', texto: 'Enterar ISR por enajenación (y por adquisición, si procede)', resp: 'Contador', plazo: { ref: 'firma', dias: 15, habiles: true }, tipo: VERIFICADO, fund: 'LISR arts. 126 y 132', nota: '15 días hábiles siguientes a la firma (CFF art. 12).', aplicaSi: () => true },
+  { id: 'p_dnot', etapa: 'posfirma', texto: 'Presentar DeclaraNOT', resp: 'Contador', plazo: { ref: 'firma', dias: 15, habiles: true }, tipo: VERIFICADO, fund: 'LISR arts. 126 y 132', nota: 'Forma y medio de presentación: verificar en la RMF.', aplicaSi: () => true },
+  { id: 'p_cfdi', etapa: 'posfirma', texto: 'Emitir CFDI con el impuesto retenido y enterado', resp: 'Contador', plazo: { ref: 'firma', dias: 15, habiles: true }, tipo: VERIF, nota: 'La LISR (art. 126) obliga a expedirlo; el plazo se ligó al entero. Verificar en la RMF.', aplicaSi: () => true },
+  { id: 'p_isabi', etapa: 'posfirma', texto: 'Pagar ISABI y presentar aviso de transmisión', resp: 'Gestor', plazo: { ref: 'firma', dias: 15 }, tipo: VERIF, nota: 'Ley de ingresos / hacienda municipal; no está en la carpeta de normativa.', aplicaSi: () => true },
+  { id: 'p_cat', etapa: 'posfirma', texto: 'Remitir aviso a catastro (traslación de dominio)', resp: 'Gestor', plazo: { ref: 'firma', dias: 15, habiles: true }, tipo: VERIFICADO, fund: 'Ley de Catastro Nay. arts. 34-II y 36', nota: 'La ley cuenta 15 días hábiles desde la autorización definitiva; la app usa la firma como referencia conservadora.', aplicaSi: () => true },
+  { id: 'p_pld', etapa: 'posfirma', texto: 'Aviso LFPIORPI (si se rebasa el umbral)', resp: 'Titular', plazo: { tipo: 'dia17' }, tipo: VERIFICADO, fund: 'LFPIORPI art. 23', nota: 'A más tardar el día 17 del mes inmediato siguiente.', aplicaSi: () => true },
+  { id: 'p_rnie', etapa: 'posfirma', texto: 'Aviso a la SRE / inscripción en el RNIE', resp: 'Proyectista', plazo: { ref: 'firma', dias: 30 }, tipo: VERIF, aplicaSi: e => e.compradorExtranjero },
   { id: 'p_test', etapa: 'posfirma', texto: 'Armar testimonio y apéndice (con Notaría 37)', resp: 'Proyectista', plazo: { ref: 'firma', dias: 10 }, tipo: INTERNO, aplicaSi: () => true },
-  { id: 'p_rpp', etapa: 'posfirma', texto: 'Inscripción en el RPP (portal notarial digital)', resp: 'Gestor', plazo: { ref: 'firma', dias: 30 }, tipo: VERIF, nota: 'Dentro de la vigencia del aviso preventivo', aplicaSi: () => true },
-  { id: 'p_canc', etapa: 'posfirma', texto: 'Inscribir cancelación de la hipoteca anterior', resp: 'Gestor', plazo: { ref: 'firma', dias: 30 }, tipo: VERIF, aplicaSi: e => e.inmuebleGravado },
+  { id: 'p_rpp', etapa: 'posfirma', texto: 'Inscripción en el RPP (portal notarial digital)', resp: 'Gestor', plazo: { ref: 'tarea', tarea: 'p_avdef', dias: 90 }, tipo: VERIFICADO, fund: 'Ley del RPP Nay. art. 91-II', nota: 'Dentro de los 90 días naturales de vigencia del aviso definitivo.', aplicaSi: () => true },
+  { id: 'p_canc', etapa: 'posfirma', texto: 'Inscribir cancelación de la hipoteca anterior', resp: 'Gestor', plazo: { ref: 'tarea', tarea: 'p_avdef', dias: 90 }, tipo: INTERNO, aplicaSi: e => e.inmuebleGravado },
   { id: 'p_inst', etapa: 'posfirma', texto: 'Entregar testimonio inscrito a la institución acreditante', resp: 'Proyectista', plazo: { ref: 'firma', dias: 45 }, tipo: INTERNO, aplicaSi: e => e.pago === 'hipoteca' },
   { id: 'p_ent', etapa: 'posfirma', texto: 'Entregar testimonio al cliente, recabar acuse y CFDI de honorarios', resp: 'Recepción', plazo: { ref: 'firma', dias: 45 }, tipo: INTERNO, aplicaSi: () => true },
 ];
@@ -246,10 +247,24 @@ function addDays(s, n) { const d = parseISO(s); d.setDate(d.getDate() + n); retu
 function diffDays(a, b) { return Math.round((parseISO(a) - parseISO(b)) / 864e5); }
 function fmt(s) { return s ? parseISO(s).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
 
-function fechaLimite(regla, exp) {
+// Días inhábiles del art. 12 del CFF (no incluye vacaciones de la autoridad,
+// que no aplican a declaraciones y pagos)
+function nLunes(y, m, n) { const d = new Date(y, m, 1); d.setDate(1 + (8 - d.getDay()) % 7 + 7 * (n - 1)); return toISO(d); }
+function inhabil(s) {
+  const d = parseISO(s), y = d.getFullYear(), md = s.slice(5);
+  if (d.getDay() === 0 || d.getDay() === 6) return true;
+  if (['01-01', '05-01', '05-05', '09-16', '12-25'].includes(md)) return true;
+  if (md === '12-01' && (y - 2024) % 6 === 0) return true;
+  return [nLunes(y, 1, 1), nLunes(y, 2, 3), nLunes(y, 10, 3)].includes(s);
+}
+function addHabiles(s, n) { let d = s; while (n > 0) { d = addDays(d, 1); if (!inhabil(d)) n--; } return d; }
+
+// fechaDe: fecha (con ajuste manual, si lo hay) de otra tarea del mismo expediente
+function fechaLimite(regla, exp, fechaDe) {
   const p = regla.plazo;
   if (p.tipo === 'dia17') { const d = parseISO(exp.fechaFirma); return toISO(new Date(d.getFullYear(), d.getMonth() + 1, 17)); }
-  return addDays(p.ref === 'alta' ? exp.fechaAlta : exp.fechaFirma, p.dias);
+  const base = p.ref === 'alta' ? exp.fechaAlta : p.ref === 'tarea' ? fechaDe(p.tarea) : exp.fechaFirma;
+  return p.habiles ? addHabiles(base, p.dias) : addDays(base, p.dias);
 }
 
 /* =========================================================================
@@ -269,11 +284,20 @@ function toast(msg) { const t = document.getElementById('toast'); t.textContent 
    ========================================================================= */
 function requisitosDe(exp) { return REQUISITOS.filter(r => r.aplicaSi(exp)); }
 function tareasDe(exp) {
+  const memo = {};
+  const fechaDe = id => memo[id] ??= ((exp.tareas[id] || {}).fecha || fechaLimite(TAREAS.find(t => t.id === id), exp, fechaDe));
   return TAREAS.filter(t => t.aplicaSi(exp)).map(t => {
     const st = exp.tareas[t.id] || {};
     const done = t.auto === 'requisitos' ? requisitosCompletos(exp) : !!st.hecho;
-    return { ...t, fecha: st.fecha || fechaLimite(t, exp), ajustada: !!st.fecha, hecho: done, resp: st.resp || t.resp };
+    return { ...t, fecha: fechaDe(t.id), ajustada: !!st.fecha, hecho: done, resp: st.resp || t.resp };
   }).sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+// Alerta: la firma debe caer dentro de la vigencia del primer aviso preventivo
+function alertaAviso(exp, tareas) {
+  const av = tareas.find(t => t.id === 't_clg');
+  const vence = addDays(av.fecha, 30);
+  if (exp.fechaFirma <= vence) return '';
+  return `<div class="notice" style="background:var(--red-soft);color:var(--red)">⚠️ La firma (${fmt(exp.fechaFirma)}) cae después de que vence el primer aviso preventivo (${fmt(vence)}; 30 días naturales desde su presentación, Ley del RPP Nay. art. 91-I). Habrá que presentar un nuevo aviso, que solo procede 15 días naturales después de que el anterior quede sin efectos.</div>`;
 }
 function requisitosCompletos(exp) { return requisitosDe(exp).every(r => (exp.requisitos[r.id] || {}).recibido); }
 
@@ -301,8 +325,9 @@ function pillEstado(r) {
   return '<span class="pill green">Al día</span>';
 }
 function tagPlazo(t) {
-  return t.tipo === VERIF ? '<span class="tag verif" title="Término legal pendiente de verificar en fuente oficial">🟡 plazo por verificar</span>'
-                          : '<span class="tag" title="Práctica interna de la notaría">práctica interna</span>';
+  if (t.tipo === VERIFICADO) return `<span class="tag ok" title="Término legal verificado">🟢 ${esc(t.fund)}</span>`;
+  if (t.tipo === VERIF) return '<span class="tag verif" title="Término legal pendiente de verificar en fuente oficial">🟡 plazo por verificar</span>';
+  return `<span class="tag" title="Práctica interna de la notaría">práctica interna</span>${t.fund ? ` <span class="tag">${esc(t.fund)}</span>` : ''}`;
 }
 function descVariables(e) {
   const p = t => t === 'moral' ? 'persona moral' : 'persona física';
@@ -414,7 +439,7 @@ function vForm() {
 function vDetalle() {
   const e = DB.expedientes.find(x => x.id === actual); if (!e) return ir('lista');
   const r = resumen(e);
-  const grupos = ['Vendedor', 'Comprador', 'Operación', 'Inmueble'];
+  const grupos = GRUPOS;
   const box = (rid, k, l) => `<label><input type="checkbox" ${(e.requisitos[rid] || {})[k] ? 'checked' : ''} onchange="setReq('${rid}','${k}',this.checked)"> ${l}</label>`;
   let etapaPrev = null;
   app.innerHTML = `
@@ -424,6 +449,7 @@ function vDetalle() {
     <div style="margin:16px 0 4px" class="row"><h2>${esc(e.numero)}</h2> ${pillEstado(r)}</div>
     <p class="sub">${esc(e.alias)}${e.municipio ? ' · ' + esc(e.municipio) : ''} · Firma: <strong>${fmt(e.fechaFirma)}</strong> · Avance ${r.avance}%</p>
     <div class="summary">${descVariables(e).map(v => `<span class="tag" style="margin:0">${esc(v)}</span>`).join('')}</div>
+    <div style="margin-top:14px">${alertaAviso(e, r.tareas)}</div>
     <div class="two" style="margin-top:8px">
       <section>
         <div class="row"><h3>Requisitos al cliente · ${r.reqOk}/${r.reqs.length}</h3><div class="spacer"></div>
@@ -432,10 +458,10 @@ function vDetalle() {
           const rs = r.reqs.filter(x => x.grupo === g); if (!rs.length) return '';
           return `<div style="font-weight:700;margin-top:6px">${g}</div>` + rs.map(x => {
             const st = e.requisitos[x.id] || {};
-            return `<div class="req ${st.recibido ? 'done' : ''}"><div><span class="t">${esc(x.texto)}</span>${x.why ? `<div class="why">Aplica por: ${esc(x.why)}</div>` : ''}</div>
+            return `<div class="req ${st.recibido ? 'done' : ''}"><div><span class="t">${esc(x.texto)}</span>${x.propuesta ? ' <span class="tag verif" title="No está en la lista «Requisitos escrituras_Not 41»; pendiente de validar">propuesta</span>' : ''}${x.why ? `<div class="why">Aplica por: ${esc(x.why)}</div>` : ''}</div>
               <div class="boxes">${box(x.id, 'pedido', 'Pedido')}${box(x.id, 'recibido', 'Recibido')}${box(x.id, 'cotejado', 'Cotejado')}</div></div>`;
           }).join('');
-        }).join('')}</div>
+        }).join('')}<p class="why" style="margin:10px 0 0">En caso de copropietarios, se deberá proporcionar de cada uno dicha documentación.</p></div>
       </section>
       <section>
         <h3>Cronograma · ${r.tarOk}/${r.tareas.length}</h3>
@@ -466,8 +492,10 @@ function copiarLista(id) {
   const pend = requisitosDe(e).filter(r => !(e.requisitos[r.id] || {}).recibido);
   const grupos = [...new Set(pend.map(r => r.grupo))];
   const txt = `*Notaría Pública 41*\nRequisitos para su escritura de compraventa (exp. ${e.numero}):\n\n` +
-    grupos.map(g => `*${g}*\n` + pend.filter(r => r.grupo === g).map(r => `• ${r.texto.replace(/\s*\(🟡[^)]*\)/, '')}`).join('\n')).join('\n\n') +
-    `\n\nPuede enviarlos escaneados; los originales se exhiben el día de la firma para su cotejo.`;
+    grupos.map(g => `*${g}*\n` + pend.filter(r => r.grupo === g).map(r => `• ${r.texto}`).join('\n')).join('\n\n') +
+    `\n\n*En caso de copropietarios, se deberá proporcionar de cada uno dicha documentación.*` +
+    `\n\n*Otros documentos necesarios (por medio de la notaría):*\n• Avalúo validado (certificado) por catastro (puede tramitarlo el cliente por su cuenta)\n• Certificado de libertad de gravamen con aviso preventivo` +
+    `\n\n*NOTA:* Los documentos requeridos podrán enviarse previamente debidamente escaneados al correo de la notaría: ${NOTARIA.correo}, o al WhatsApp ${NOTARIA.whatsapp}, en el entendido de que posteriormente se deberán exhibir los originales para su cotejo.`;
   const ok = () => { pend.forEach(r => e.requisitos[r.id] = { ...(e.requisitos[r.id] || {}), pedido: true }); guardar(); render(); toast('Lista copiada; requisitos marcados como pedidos'); };
   (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(ok, () => { prompt('Copie la lista:', txt); ok(); });
 }
@@ -499,6 +527,7 @@ function vRespaldo() {
       <button class="btn danger" onclick="if(confirm('¿Borrar todos los expedientes de este navegador?')){DB.expedientes=[];guardar();toast('Datos borrados');ir('lista')}">Borrar todo</button>
     </div></div>
     <h3>Sobre los plazos</h3><div class="card pad why" style="font-size:14px">
+      <p><span class="tag ok">🟢 fundamento</span> Término legal verificado en la ley (carpeta de normativa, 31-oct-2026); se indica el artículo.</p>
       <p><span class="tag verif">🟡 plazo por verificar</span> Término legal tomado del vault de la notaría que aún no se ha verificado en fuente oficial. La fecha es una propuesta editable.</p>
       <p><span class="tag">práctica interna</span> Plazo de organización de la notaría, no un término legal.</p></div>`;
 }
@@ -524,13 +553,14 @@ function cargarEjemplos() {
   ];
   ej.forEach(x => { x.requisitos = {}; x.tareas = {}; });
   // Avances simulados para que la demo muestre distintos estados
-  ['v_ine', 'v_curp', 'v_csf', 'v_nac', 'v_mat', 'i_tit', 'i_pred'].forEach(k => ej[0].requisitos[k] = { pedido: true, recibido: true });
-  ['t_lista', 't_asig', 't_presu', 't_clg', 't_aval', 't_nopred', 't_proy'].forEach(k => ej[0].tareas[k] = { hecho: true });
+  ['v_ine', 'v_csf', 'v_dom', 'v_mat', 'v_gen', 'i_tit', 'i_pred'].forEach(k => ej[0].requisitos[k] = { pedido: true, recibido: true });
+  ['t_lista', 't_asig', 't_presu', 't_clg', 't_aval', 't_proy'].forEach(k => ej[0].tareas[k] = { hecho: true });
   ['t_lista', 't_asig', 't_presu', 't_clg', 't_aval'].forEach(k => ej[1].tareas[k] = { hecho: true });
   ['vm_acta', 'vm_poder', 'o_hip1'].forEach(k => ej[1].requisitos[k] = { pedido: true, recibido: true });
   REQUISITOS.forEach(r => ej[2].requisitos[r.id] = { pedido: true, recibido: true, cotejado: true });
   TAREAS.filter(t => t.etapa !== 'posfirma').forEach(t => ej[2].tareas[t.id] = { hecho: true });
   ['p_test', 'p_isr', 'p_cfdi'].forEach(k => ej[2].tareas[k] = { hecho: true });
+  ej[2].tareas.t_clg = { hecho: true, fecha: addDays(ej[2].fechaFirma, -10) };  // primer aviso dentro de los 30 días previos a la firma
   DB.expedientes.push(...ej); guardar(); toast('3 expedientes de ejemplo cargados'); ir('lista');
 }
 

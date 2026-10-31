@@ -19,13 +19,23 @@ Abrir `index.html` en el navegador. No necesita instalación, servidor ni intern
 Los datos se guardan **solo en el navegador** de quien la usa (localStorage); nada se envía a internet. Use un número interno y un alias o iniciales en lugar de los nombres de los otorgantes, y exporte respaldos con regularidad.
 
 ## Sobre los plazos
-- **🟡 plazo por verificar:** término legal (ISR, DeclaraNOT, ISABI, LFPIORPI, RPP, SRE/RNIE) que **aún no se ha verificado en fuente oficial**. La fecha es una propuesta editable en cada expediente.
+- **🟢 verificado** (con su artículo), verificado el 31-oct-2026 contra el texto vigente:
+  - Entero de ISR y DeclaraNOT: 15 días **hábiles** siguientes a la firma (LISR arts. 126 y 132; CFF art. 12).
+  - Aviso LFPIORPI: a más tardar el día 17 del mes siguiente (LFPIORPI art. 23).
+  - Aviso a catastro: 15 días hábiles (Ley de Catastro de Nayarit, arts. 34-II y 36).
+  - Avisos preventivos: el primero vence a los 30 días naturales; el definitivo se presenta después de la firma, dentro de esa vigencia, y dura 90 días naturales para inscribir (Ley del RPP de Nayarit, art. 91). La app avisa si la firma cae fuera de la vigencia del primer aviso.
+- **🟡 plazo por verificar:** ISABI (ley municipal), CFDI de retenciones y SRE/RNIE. La fecha es una propuesta editable.
 - **práctica interna:** plazo de organización de la notaría, no un término legal.
+
+Los días inhábiles se calculan según el art. 12 del CFF: fines de semana y días festivos oficiales.
+
+## Requisitos
+Se basan en la lista oficial de la notaría, «Requisitos escrituras_Not 41» (actos traslativos de dominio), con su misma redacción. Los requisitos que no están en esa lista y que la app agrega según las variables (cónyuge en sociedad conyugal, crédito, condominio, extranjero, ejidal, beneficiario controlador) aparecen marcados como **propuesta**, pendientes de validar.
 
 Las reglas están en `index.html`, en los objetos `REQUISITOS` y `TAREAS`. Cada regla tiene una condición `aplicaSi` y un plazo relativo a la fecha de alta o de firma, así que para agregar o corregir un requisito basta con editar una línea.
 
 ## Próximos pasos
-- Verificar los plazos 🟡 contra la ley vigente y marcarlos como verificados.
+- Verificar los plazos 🟡 restantes (ISABI municipal, RMF, Ley de Inversión Extranjera).
 - Agregar otros actos: donación, adjudicación por herencia, poderes, etc.
 - Base de datos compartida para todo el equipo y recordatorios en el calendario.
 - Un asistente con Claude que revise el expediente y sugiera faltantes.
